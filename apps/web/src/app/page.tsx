@@ -4,12 +4,13 @@ import clsx from 'clsx';
 import { AnimatePresence, motion } from 'motion/react';
 import { Brain, MessageSquare, ShieldAlert, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { needsHuman, type ModAction } from '@quell/shared';
+import { banActive, banKey, needsHuman, type ModAction, type ModeratedMessage } from '@quell/shared';
 import { Chat } from '@/components/Chat';
 import { LearningPanel } from '@/components/LearningPanel';
 import { ReviewQueue, type Selection } from '@/components/ReviewQueue';
 import { StreamHeader } from '@/components/StreamHeader';
 import { TopBar } from '@/components/TopBar';
+import { api } from '@/lib/api';
 import { useLive } from '@/lib/useLive';
 
 const QUEUE_LIMIT = 60;
@@ -44,6 +45,20 @@ export default function ModView() {
 
   const flash = (text: string) => setNote({ text, id: Date.now() });
 
+  const bans = useMemo(() => new Map(live.bans.map((b) => [b.id, b])), [live.bans]);
+  const banOf = (m: ModeratedMessage) => {
+    const b = bans.get(banKey(m.author, m.device));
+    return b && banActive(b) ? b : undefined;
+  };
+  const ban = (id: string, minutes: number | null) => {
+    const author = live.byId[id]?.author ?? 'They';
+    api
+      .ban(id, minutes)
+      .then(() => flash(minutes ? `${author} is timed out for ${minutes} minutes` : `${author} is banned from chat`))
+      .catch((e: Error) => flash(e.message));
+  };
+  const unban = (banId: string) => void api.unban(banId).catch((e: Error) => flash(e.message));
+
   useEffect(() => {
     if (live.lastReplay) flash(`${live.lastReplay.sent} corrected examples recorded by Mubit`);
   }, [live.lastReplay]);
@@ -66,6 +81,9 @@ export default function ModView() {
             selected={selected}
             selection={selection}
             lookup={(id) => live.byId[id]}
+            banOf={banOf}
+            onBan={ban}
+            onUnban={unban}
             onClearSelection={() => setSelection(null)}
             onCorrected={flash}
           />
@@ -79,6 +97,7 @@ export default function ModView() {
             rules={live.rules}
             task={live.task}
             evaluation={live.evaluation}
+            bans={live.bans.filter((b) => banActive(b))}
             onNote={flash}
           />
         </div>
@@ -86,6 +105,8 @@ export default function ModView() {
           <Chat
             messages={messages}
             selectedId={selection?.id ?? null}
+            banOf={banOf}
+            onBan={ban}
             onSelect={(id: string, action?: ModAction) => {
               setSelection({ id, action, at: Date.now() });
               // On small screens the correction opens in the queue, so go there.

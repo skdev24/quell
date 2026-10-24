@@ -57,7 +57,7 @@ export class SwarmService implements OnModuleDestroy {
     private readonly mubit: MubitService,
     private readonly moderation: ModerationService,
     private readonly events: EventsService,
-    store: StoreService,
+    private readonly store: StoreService,
   ) {
     for (const m of store.allMessages()) if (m.source === 'swarm') this.used.add(normalise(m.text));
     for (const p of [...PERSONAS, SCAM_WAVE]) {
@@ -150,6 +150,7 @@ export class SwarmService implements OnModuleDestroy {
   private post(persona: Persona): boolean {
     const next = this.take(persona) ?? this.take(PERSONAS[0]);
     if (!next) return false; // Everyone is waiting on generation; skip this beat.
+    if (this.store.banFor(next.author)) return false; // Banned chatters stay quiet.
     const message: ChatMessage = {
       id: randomUUID(),
       channel: CHANNEL,

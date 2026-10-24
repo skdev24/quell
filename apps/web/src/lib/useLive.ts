@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useReducer } from 'react';
-import type { LiveState, Metrics, ModeratedMessage, Rule, StreamEvent, SwarmState } from '@quell/shared';
+import type { Ban, LiveState, Metrics, ModeratedMessage, Rule, StreamEvent, SwarmState } from '@quell/shared';
 import { api, apiBase } from './api';
 
 const KEEP = 400;
@@ -12,6 +12,7 @@ export interface Live {
   order: string[];
   byId: Record<string, ModeratedMessage>;
   rules: Rule[];
+  bans: Ban[];
   metrics: Metrics | null;
   swarm: SwarmState | null;
   task: LiveState['task'] | null;
@@ -30,6 +31,7 @@ const initial: Live = {
   order: [],
   byId: {},
   rules: [],
+  bans: [],
   metrics: null,
   swarm: null,
   task: null,
@@ -48,6 +50,7 @@ function reduce(s: Live, a: Action): Live {
         byId,
         order: a.state.messages.map((m) => m.id),
         rules: a.state.rules,
+        bans: a.state.bans ?? [],
         metrics: a.state.metrics,
         swarm: a.state.swarm,
         task: a.state.task,
@@ -58,7 +61,7 @@ function reduce(s: Live, a: Action): Live {
       return { ...s, evaluation: a.data };
     case 'reset':
       // The fresh snapshot arrives as an 'init' right after.
-      return { ...s, order: [], byId: {}, rules: [], lastReplay: null };
+      return { ...s, order: [], byId: {}, rules: [], bans: [], lastReplay: null };
     case 'connected':
       return { ...s, connected: a.value };
     case 'message': {
@@ -80,6 +83,8 @@ function reduce(s: Live, a: Action): Live {
       const rules = i >= 0 ? s.rules.map((r) => (r.id === a.data.id ? a.data : r)) : [...s.rules, a.data];
       return { ...s, rules };
     }
+    case 'bans':
+      return { ...s, bans: a.data };
     case 'rule-removed':
       return { ...s, rules: s.rules.filter((r) => r.id !== a.data.id) };
     case 'metrics':
@@ -91,7 +96,7 @@ function reduce(s: Live, a: Action): Live {
   }
 }
 
-const EVENT_TYPES = ['message', 'rule', 'rule-removed', 'metrics', 'swarm', 'replay', 'eval', 'reset'] as const;
+const EVENT_TYPES = ['message', 'rule', 'rule-removed', 'bans', 'metrics', 'swarm', 'replay', 'eval', 'reset'] as const;
 
 /**
  * Snapshot from /state plus live updates over server-sent events. Events that

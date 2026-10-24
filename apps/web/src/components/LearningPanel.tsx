@@ -3,8 +3,9 @@
 import clsx from 'clsx';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowUpRight, Brain, X } from 'lucide-react';
-import { REVIEW_SECONDS, type EvalRun, type Metrics, type Rule } from '@quell/shared';
+import { REVIEW_SECONDS, type Ban, type EvalRun, type Metrics, type Rule } from '@quell/shared';
 import { api } from '@/lib/api';
+import { timeOf } from '@/lib/verdict';
 import { Benchmark } from './Benchmark';
 import { Panel } from './primitives';
 
@@ -16,12 +17,14 @@ export function LearningPanel({
   rules,
   task,
   evaluation,
+  bans,
   onNote,
 }: {
   metrics: Metrics | null;
   rules: Rule[];
   task: { model: string; fingerprint: string } | null;
   evaluation: EvalRun | null;
+  bans: Ban[];
   onNote: (note: string) => void;
 }) {
   const m = metrics;
@@ -111,6 +114,32 @@ export function LearningPanel({
             </ul>
           )}
         </div>
+
+        {bans.length > 0 && (
+          <div className="mt-2 rounded-tw-lg bg-raised p-3.5">
+            <div className="flex items-baseline justify-between">
+              <div className="label">Kept out of chat</div>
+              <span className="tnum text-[12px] text-dim">{bans.length}</span>
+            </div>
+            <ul className="mt-2 space-y-1">
+              {bans.map((b) => (
+                <li key={b.id} className="flex items-center gap-2 rounded-tw bg-bg/60 py-1.5 pl-3 pr-1.5 text-[12.5px]">
+                  <span className="min-w-0 truncate font-semibold text-fg">{b.author}</span>
+                  <span className="shrink-0 text-faint">
+                    {b.until === null ? 'banned' : `timed out until ${timeOf(b.until).slice(0, 5)}`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void api.unban(b.id).catch((e: Error) => onNote(e.message))}
+                    className="ml-auto h-6 shrink-0 rounded-tw px-2 text-[12px] font-semibold text-purple-soft hover:bg-white/[0.08]"
+                  >
+                    Unban
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {task && (
           <div className="mt-2 rounded-tw-lg bg-raised p-3.5">

@@ -63,7 +63,31 @@ export interface ChatMessage {
   persona?: string;
   /** Ground truth for swarm messages: what this community wants done. */
   expected?: Verdict;
+  /** Random id of the phone that posted it, so a ban follows the device, not the name. */
+  device?: string;
   createdAt: number;
+}
+
+/**
+ * A chatter kept out of chat, Twitch-style: they can still watch the stream and
+ * read chat, but nothing they send is posted.
+ */
+export interface Ban {
+  /** See banKey. */
+  id: string;
+  author: string;
+  at: number;
+  /** When a timeout ends; null for a ban that lasts until a moderator lifts it. */
+  until: number | null;
+}
+
+/** Bans follow a phone when there is one, and the name otherwise (the simulated room). */
+export function banKey(author: string, device?: string): string {
+  return device ? `device:${device}` : `name:${author.toLowerCase()}`;
+}
+
+export function banActive(b: Ban, now = Date.now()): boolean {
+  return b.until === null || b.until > now;
 }
 
 export type MessageStatus = 'queued' | 'done' | 'error';
@@ -179,6 +203,7 @@ export interface LiveState {
   swarm: SwarmState;
   task: { model: string; fingerprint: string };
   evaluation: EvalRun | null;
+  bans: Ban[];
 }
 
 export type StreamEvent =
@@ -187,6 +212,7 @@ export type StreamEvent =
   | { type: 'message'; data: ModeratedMessage }
   | { type: 'rule'; data: Rule }
   | { type: 'rule-removed'; data: { id: string } }
+  | { type: 'bans'; data: Ban[] }
   | { type: 'metrics'; data: Metrics }
   | { type: 'swarm'; data: SwarmState }
   | { type: 'replay'; data: { ruleId: string; sent: number } };

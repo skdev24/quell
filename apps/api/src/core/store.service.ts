@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
-import type { ModeratedMessage, Rule } from '@quell/shared';
+import { banActive, banKey, type Ban, type ModeratedMessage, type Rule } from '@quell/shared';
 import { config } from './config';
 
 const KEEP_IN_MEMORY = 4000;
@@ -18,10 +18,13 @@ export class StoreService {
   private readonly saveRule: StatementSync;
   private readonly deleteRule: StatementSync;
   private readonly saveCounter: StatementSync;
+  private readonly saveBan: StatementSync;
+  private readonly deleteBan: StatementSync;
 
   private readonly messages = new Map<string, ModeratedMessage>();
   private order: string[] = [];
   rules: Rule[] = [];
+  private bans = new Map<string, Ban>();
   readonly counters = { corrections: 0, trainingExamples: 0, tokensIn: 0, tokensOut: 0 };
 
   constructor() {
@@ -31,6 +34,7 @@ export class StoreService {
       CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, created_at INTEGER, json TEXT);
       CREATE TABLE IF NOT EXISTS rules (id TEXT PRIMARY KEY, created_at INTEGER, json TEXT);
       CREATE TABLE IF NOT EXISTS counters (name TEXT PRIMARY KEY, value INTEGER);
+      CREATE TABLE IF NOT EXISTS bans (id TEXT PRIMARY KEY, json TEXT);
     `);
     this.saveMessage = this.db.prepare(
       'INSERT OR REPLACE INTO messages (id, created_at, json) VALUES (?, ?, ?)',
@@ -38,6 +42,8 @@ export class StoreService {
     this.saveRule = this.db.prepare('INSERT OR REPLACE INTO rules (id, created_at, json) VALUES (?, ?, ?)');
     this.deleteRule = this.db.prepare('DELETE FROM rules WHERE id = ?');
     this.saveCounter = this.db.prepare('INSERT OR REPLACE INTO counters (name, value) VALUES (?, ?)');
+    this.saveBan = this.db.prepare('INSERT OR REPLACE INTO bans (id, json) VALUES (?, ?)');
+    this.deleteBan = this.db.prepare('DELETE FROM bans WHERE id = ?');
     this.load();
   }
 
@@ -57,6 +63,10 @@ export class StoreService {
     const counters = this.db.prepare('SELECT name, value FROM counters').all() as { name: string; value: number }[];
     for (const c of counters) {
       if (c.name in this.counters) this.counters[c.name as keyof typeof this.counters] = c.value;
+    }
+    for (const row of this.db.prepare('SELECT json FROM bans').all() as { json: string }[]) {
+      const ban = JSON.parse(row.json) as Ban;
+      this.bans.set(ban.id, ban);
     }
   }
 
@@ -99,9 +109,32 @@ export class StoreService {
     return this.rules.length !== before;
   }
 
-  /** Clears chat, rules and counters for a fresh demo. The Mubit task lock is untouched. */
+  /** Bans still in force; expired timeouts are dropped as they're found. */
+  activeBans(): Ban[] {
+    const now = Date.now();
+    for (const b of this.bans.values()) if (!banActive(b, now)) this.removeBan(b.id);
+    return [...this.bans.values()];
+  }
+
+  banFor(author: string, device?: string): Ban | undefined {
+    const ban = this.bans.get(banKey(author, device));
+    return ban && banActive(ban) ? ban : undefined;
+  }
+
+  putBan(ban: Ban): void {
+    this.bans.set(ban.id, ban);
+    this.saveBan.run(ban.id, JSON.stringify(ban));
+  }
+
+  removeBan(id: string): boolean {
+    this.deleteBan.run(id);
+    return this.bans.delete(id);
+  }
+
+  /** Clears chat, rules, bans and counters for a fresh demo. The Mubit task lock is untouched. */
   reset(): void {
-    this.db.exec('DELETE FROM messages; DELETE FROM rules; DELETE FROM counters;');
+    this.db.exec('DELETE FROM messages; DELETE FROM rules; DELETE FROM counters; DELETE FROM bans;');
+    this.bans.clear();
     this.messages.clear();
     this.order = [];
     this.rules = [];

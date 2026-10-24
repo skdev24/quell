@@ -1,4 +1,4 @@
-import type { CorrectionInput, EvalRun, LiveState, Rule, SwarmState } from '@quell/shared';
+import type { Ban, CorrectionInput, EvalRun, LiveState, Rule, SwarmState } from '@quell/shared';
 
 /** The API runs beside the web app; on a phone this resolves to the laptop's LAN address. */
 export function apiBase(): string {
@@ -32,6 +32,10 @@ export const api = {
   demo: (stage: 'teach' | 'again' | 'reset') => call<{ posted?: number }>(`/demo/${stage}`, { method: 'POST' }),
   info: () => call<{ lan: string[] }>('/info'),
   raid: (count = 150) => call<{ posted: number }>('/swarm/raid', { method: 'POST', body: JSON.stringify({ count }) }),
-  ingest: (author: string, text: string) =>
-    call<{ id: string }>('/ingest', { method: 'POST', body: JSON.stringify({ author, text }) }),
+  ingest: (author: string, text: string, device?: string) =>
+    call<{ id: string }>('/ingest', { method: 'POST', body: JSON.stringify({ author, text, device }) }),
+  /** Minutes for a timeout; null bans until a moderator lifts it. */
+  ban: (messageId: string, minutes: number | null) =>
+    call<Ban>(`/messages/${messageId}/ban`, { method: 'POST', body: JSON.stringify({ minutes }) }),
+  unban: (id: string) => call<{ ok: true }>(`/bans/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 };

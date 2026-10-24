@@ -1,9 +1,9 @@
 'use client';
 
 import clsx from 'clsx';
-import { ArrowDown, Loader2, MessageSquare, ShieldAlert, ShieldCheck, ShieldX, Users } from 'lucide-react';
+import { ArrowDown, Ban as BanIcon, Clock, Loader2, MessageSquare, ShieldAlert, ShieldCheck, ShieldX, Users } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { ModeratedMessage } from '@quell/shared';
+import { banActive, banKey, type Ban, type ModeratedMessage } from '@quell/shared';
 import { api } from '@/lib/api';
 import { REASON_LABEL, nameColor, timeOf } from '@/lib/verdict';
 import { MessageText } from '../MessageText';
@@ -22,6 +22,8 @@ interface Notice {
 export function ViewerChat({
   messages,
   me,
+  device,
+  bans,
   mine,
   onSent,
   onLeave,
@@ -29,6 +31,8 @@ export function ViewerChat({
 }: {
   messages: ModeratedMessage[];
   me: string;
+  device: string;
+  bans: Ban[];
   mine: Set<string>;
   onSent: (id: string) => void;
   onLeave: () => void;
@@ -45,6 +49,8 @@ export function ViewerChat({
   const [lastSent, setLastSent] = useState<{ id: string; at: number } | null>(null);
   const noticeId = useRef(0);
   const cooldown = Math.max(0, Math.ceil((slowUntil - now) / 1000));
+  const key = banKey(me, device || undefined);
+  const ban = bans.find((b) => b.id === key && banActive(b, now));
 
   // One clock drives slow mode and the status banner; it stops with the component.
   useEffect(() => {
@@ -60,10 +66,10 @@ export function ViewerChat({
 
   const send = async () => {
     const value = text.trim();
-    if (!value || cooldown > 0 || sending) return;
+    if (!value || cooldown > 0 || sending || ban) return;
     setSending(true);
     try {
-      const { id } = await api.ingest(me, value);
+      const { id } = await api.ingest(me, value, device || undefined);
       onSent(id);
       // Timed by this device's clock, so a phone a few seconds off the laptop still works.
       setLastSent({ id, at: Date.now() });
@@ -124,6 +130,9 @@ export function ViewerChat({
 
       <div className="shrink-0 border-t border-line px-3 pt-2.5 pb-[max(12px,env(safe-area-inset-bottom))]">
         <LatestStatus messages={messages} sent={lastSent} now={now} />
+        {ban ? (
+          <BanNotice ban={ban} now={now} />
+        ) : (
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -150,6 +159,7 @@ export function ViewerChat({
             {sending ? <Loader2 className="size-4 animate-spin" /> : cooldown > 0 ? `${cooldown}s` : 'Chat'}
           </button>
         </form>
+        )}
         <div className="mt-2 flex items-center justify-between text-[12px] text-faint">
           <span className="truncate">
             Chatting as{' '}
@@ -164,6 +174,30 @@ export function ViewerChat({
         </div>
       </div>
     </section>
+  );
+}
+
+/** Twitch-style: a banned viewer keeps the stream and chat, only the input is locked. */
+function BanNotice({ ban, now }: { ban: Ban; now: number }) {
+  const left = ban.until === null ? 0 : Math.max(0, Math.ceil((ban.until - now) / 1000));
+  return (
+    <div className="flex h-11 items-center gap-2.5 rounded-tw bg-remove/10 px-3 text-[13px] font-semibold text-remove">
+      {ban.until === null ? <BanIcon className="size-4 shrink-0" /> : <Clock className="size-4 shrink-0" />}
+      <span className="min-w-0 truncate">
+        {ban.until === null ? (
+          'A moderator banned you from chat'
+        ) : (
+          <>
+            You&apos;re timed out ·{' '}
+            <span className="tnum">
+              {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
+            </span>{' '}
+            left
+          </>
+        )}
+      </span>
+      <span className="ml-auto shrink-0 text-[12px] font-medium text-faint">You can still watch</span>
+    </div>
   );
 }
 

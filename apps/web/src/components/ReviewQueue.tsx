@@ -2,9 +2,9 @@
 
 import clsx from 'clsx';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, EyeOff, Flag, Loader2, ShieldAlert, Sparkles, Trash2, X } from 'lucide-react';
+import { Ban as BanIcon, Check, Clock, EyeOff, Flag, Loader2, ShieldAlert, Sparkles, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { CorrectionInput, ModAction, ModReason, ModeratedMessage } from '@quell/shared';
+import type { Ban, CorrectionInput, ModAction, ModReason, ModeratedMessage } from '@quell/shared';
 import { api } from '@/lib/api';
 import { ACTION_LABEL, ACTION_TONE, REASON_LABEL, nameColor, timeOf } from '@/lib/verdict';
 import { MessageText } from './MessageText';
@@ -27,6 +27,9 @@ export function ReviewQueue({
   lookup,
   selected,
   selection,
+  banOf,
+  onBan,
+  onUnban,
   onClearSelection,
   onCorrected,
 }: {
@@ -38,6 +41,11 @@ export function ReviewQueue({
   lookup: (id: string) => ModeratedMessage | undefined;
   selected: ModeratedMessage | null;
   selection: Selection | null;
+  /** The ban in force for whoever posted a message, if any. */
+  banOf: (m: ModeratedMessage) => Ban | undefined;
+  /** Minutes for a timeout; null for a ban. */
+  onBan: (messageId: string, minutes: number | null) => void;
+  onUnban: (banId: string) => void;
   onClearSelection: () => void;
   onCorrected: (note: string) => void;
 }) {
@@ -139,6 +147,9 @@ export function ReviewQueue({
               onDismiss={m.id === selected?.id ? onClearSelection : undefined}
               onDrafting={(on) => setDraftingFor(m.id, on)}
               onCorrected={onCorrected}
+              ban={banOf(m)}
+              onBan={(minutes) => onBan(m.id, minutes)}
+              onUnban={onUnban}
             />
           ))}
         </AnimatePresence>
@@ -165,6 +176,9 @@ function Card({
   onDismiss,
   onDrafting,
   onCorrected,
+  ban,
+  onBan,
+  onUnban,
 }: {
   m: ModeratedMessage;
   pinned: boolean;
@@ -173,6 +187,9 @@ function Card({
   onDismiss?: () => void;
   onDrafting: (on: boolean) => void;
   onCorrected: (note: string) => void;
+  ban?: Ban;
+  onBan: (minutes: number | null) => void;
+  onUnban: (banId: string) => void;
 }) {
   const [draft, setDraftState] = useState<Draft | null>(null);
   const [rule, setRule] = useState('');
@@ -239,6 +256,11 @@ function Card({
           {d?.confidence} confidence{m.safetyNet && ' · safety net'}
         </span>
         <span className="ml-auto flex items-center gap-2">
+          {ban && (
+            <span className="whitespace-nowrap rounded-full bg-remove/15 px-2 text-[11px] font-semibold leading-5 text-remove">
+              {ban.until === null ? 'Banned' : 'Timed out'}
+            </span>
+          )}
           <span className="tnum text-[11px] text-faint">{timeOf(m.createdAt)}</span>
           {onDismiss && (
             <button
@@ -277,6 +299,24 @@ function Card({
           <Button variant="ghost" onClick={() => open(defaultDraft(m, 'flag'))}>
             <Flag className="size-4 text-flag" /> Hold
           </Button>
+          {/* Keeps the chatter out of chat; they can still watch. */}
+          <span className="ml-auto flex items-center gap-1">
+            {ban ? (
+              <Button variant="ghost" onClick={() => onUnban(ban.id)} title="Let them chat again">
+                {ban.until === null ? <BanIcon className="size-4 text-remove" /> : <Clock className="size-4 text-flag" />}
+                Unban
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => onBan(10)} title="Can't chat for 10 minutes, can still watch">
+                  <Clock className="size-4" /> Timeout
+                </Button>
+                <Button variant="ghost" onClick={() => onBan(null)} title="Can't chat until unbanned, can still watch">
+                  <BanIcon className="size-4 text-remove" /> Ban
+                </Button>
+              </>
+            )}
+          </span>
         </div>
       ) : (
         <div className="mx-3 mb-3 mt-2.5 border-t border-line pt-2.5">

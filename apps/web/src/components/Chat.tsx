@@ -2,9 +2,9 @@
 
 import clsx from 'clsx';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowDown, Check, EyeOff, MessageSquare, Sparkles, Trash2, Users } from 'lucide-react';
+import { ArrowDown, Ban as BanIcon, Check, Clock, EyeOff, MessageSquare, Sparkles, Trash2, Users } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
-import type { ModAction, ModeratedMessage } from '@quell/shared';
+import type { Ban, ModAction, ModeratedMessage } from '@quell/shared';
 import { api } from '@/lib/api';
 import { ACTION_LABEL, nameColor, timeOf } from '@/lib/verdict';
 import { MessageText } from './MessageText';
@@ -15,10 +15,14 @@ export function Chat({
   messages,
   selectedId,
   onSelect,
+  banOf,
+  onBan,
 }: {
   messages: ModeratedMessage[];
   selectedId: string | null;
   onSelect: (id: string, action?: ModAction) => void;
+  banOf: (m: ModeratedMessage) => Ban | undefined;
+  onBan: (messageId: string, minutes: number | null) => void;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(true);
@@ -68,7 +72,7 @@ export function Chat({
             <p className="px-5 py-3 text-[13px] text-dim">Welcome to the chat room!</p>
           )}
           {messages.map((m) => (
-            <Line key={m.id} m={m} selected={m.id === selectedId} onSelect={onSelect} />
+            <Line key={m.id} m={m} selected={m.id === selectedId} onSelect={onSelect} ban={banOf(m)} onBan={onBan} />
           ))}
         </div>
 
@@ -98,10 +102,14 @@ function Line({
   m,
   selected,
   onSelect,
+  ban,
+  onBan,
 }: {
   m: ModeratedMessage;
   selected: boolean;
   onSelect: (id: string, action?: ModAction) => void;
+  ban?: Ban;
+  onBan: (messageId: string, minutes: number | null) => void;
 }) {
   const action = m.correction?.action ?? m.decision?.action;
   const removed = action === 'remove';
@@ -126,6 +134,17 @@ function Line({
         <ModIcon label="Redact" onClick={() => onSelect(m.id, 'redact')}>
           <EyeOff className="size-3.5 text-redact" />
         </ModIcon>
+        {!ban && (
+          <>
+            <span className="mx-0.5 h-4 w-px bg-line-strong" />
+            <ModIcon label="Timeout 10 min" onClick={() => onBan(m.id, 10)}>
+              <Clock className="size-3.5 text-dim" />
+            </ModIcon>
+            <ModIcon label="Ban from chat" onClick={() => onBan(m.id, null)}>
+              <BanIcon className="size-3.5 text-remove" />
+            </ModIcon>
+          </>
+        )}
       </span>
 
       <span className="tnum mr-1.5 text-[12px] text-faint">{timeOf(m.createdAt).slice(0, 5)}</span>
@@ -160,9 +179,10 @@ function Line({
         </span>
       )}
 
-      {(held || m.correction || m.rejudged || m.cached || m.status === 'error') && (
+      {(held || ban || m.correction || m.rejudged || m.cached || m.status === 'error') && (
         <span className="ml-2 inline-flex translate-y-[-1px] items-center gap-1 align-middle text-[11px] font-semibold">
           {held && !m.correction && <span className="text-flag">Held for review</span>}
+          {ban && <span className="text-remove">{ban.until === null ? 'banned' : 'timed out'}</span>}
           {m.correction && (
             <span className="inline-flex items-center gap-1 text-purple-soft">
               <Sparkles className="size-3" /> Taught · {ACTION_LABEL[m.correction.action].toLowerCase()}

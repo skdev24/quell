@@ -8,6 +8,7 @@ import { useLive } from '@/lib/useLive';
 
 const NAME_KEY = 'quell-name';
 const MINE_KEY = 'quell-mine';
+const DEVICE_KEY = 'quell-device';
 
 /**
  * The viewer page the room opens from the QR code: Twitch-style player and chat,
@@ -18,9 +19,17 @@ export default function Watch() {
   const [me, setMe] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [mine, setMine] = useState<Set<string>>(new Set());
+  const [device, setDevice] = useState('');
 
   useEffect(() => {
     setMe(storageGet(NAME_KEY));
+    // A random id for this phone, so a ban sticks when someone changes their name.
+    let id = storageGet(DEVICE_KEY);
+    if (!id) {
+      id = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      storageSet(DEVICE_KEY, id);
+    }
+    setDevice(id);
     try {
       setMine(new Set(JSON.parse(storageGet(MINE_KEY) ?? '[]') as string[]));
     } catch {
@@ -55,6 +64,8 @@ export default function Watch() {
         <ViewerChat
           messages={messages}
           me={me}
+          device={device}
+          bans={live.bans}
           mine={mine}
           viewers={viewers}
           onSent={(id) =>

@@ -3,11 +3,13 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpException,
   HttpStatus,
   Ip,
   MessageEvent,
+  NotFoundException,
   Param,
   Post,
   Sse,
@@ -16,7 +18,7 @@ import { randomUUID } from 'node:crypto';
 import { networkInterfaces } from 'node:os';
 import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from 'obscenity';
 import { Observable, map, merge, interval } from 'rxjs';
-import type { CorrectionInput, LiveState, SwarmState } from '@quell/shared';
+import { banKey, type Ban, type CorrectionInput, type LiveState, type SwarmState } from '@quell/shared';
 import { CHANNEL } from './core/community';
 import { EventsService } from './core/events.service';
 import { StoreService } from './core/store.service';
@@ -55,6 +57,7 @@ export class ApiController {
       swarm: this.swarm.snapshot,
       task: { model: TASK_MODEL, fingerprint: TASK_FINGERPRINT },
       evaluation: this.evals.latest,
+      bans: this.store.activeBans(),
     };
   }
 
@@ -67,9 +70,12 @@ export class ApiController {
   }
 
   @Post('ingest')
-  ingest(@Body() body: { author?: string; text?: string }, @Ip() ip: string) {
+  ingest(@Body() body: { author?: string; text?: string; device?: string }, @Ip() ip: string) {
     const text = (body.text ?? '').trim();
     const author = (body.author ?? '').trim().slice(0, 24) || 'guest';
+    const device = typeof body.device === 'string' ? body.device.slice(0, 64) || undefined : undefined;
+    const ban = this.store.banFor(author, device);
+    if (ban) throw new ForbiddenException(banNotice(ban));
     if (!text) throw new BadRequestException('Message is empty.');
     if (text.length > MAX_LENGTH) throw new BadRequestException(`Keep it under ${MAX_LENGTH} characters.`);
     const last = this.lastPost.get(ip) ?? 0;
@@ -86,9 +92,34 @@ export class ApiController {
       author,
       text,
       source: 'crowd',
+      device,
       createdAt: Date.now(),
     });
     return { id: m.id };
+  }
+
+  /** Times out (minutes) or bans (no minutes) whoever posted a message. They can still watch. */
+  @Post('messages/:id/ban')
+  ban(@Param('id') id: string, @Body() body: { minutes?: number | null }) {
+    const m = this.store.getMessage(id);
+    if (!m) throw new NotFoundException('No such message.');
+    const minutes = Number(body?.minutes);
+    const ban: Ban = {
+      id: banKey(m.author, m.device),
+      author: m.author,
+      at: Date.now(),
+      until: minutes > 0 ? Date.now() + Math.min(minutes, 24 * 60) * 60_000 : null,
+    };
+    this.store.putBan(ban);
+    this.events.emit({ type: 'bans', data: this.store.activeBans() });
+    return ban;
+  }
+
+  @Delete('bans/:id')
+  unban(@Param('id') id: string) {
+    if (!this.store.removeBan(id)) throw new NotFoundException('No such ban.');
+    this.events.emit({ type: 'bans', data: this.store.activeBans() });
+    return { ok: true };
   }
 
   @Post('messages/:id/correct')
@@ -142,4 +173,10 @@ export class ApiController {
     const count = Math.max(10, Math.min(500, Number(body?.count) || 150));
     return { posted: this.swarm.raid(count) };
   }
+}
+
+function banNotice(ban: Ban): string {
+  if (ban.until === null) return 'A moderator banned you from chat. You can still watch.';
+  const minutes = Math.max(1, Math.ceil((ban.until - Date.now()) / 60_000));
+  return `You're timed out for ${minutes} more minute${minutes === 1 ? '' : 's'}.`;
 }
