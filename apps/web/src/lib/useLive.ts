@@ -62,7 +62,10 @@ function reduce(s: Live, a: Action): Live {
     case 'connected':
       return { ...s, connected: a.value };
     case 'message': {
-      const exists = a.data.id in s.byId;
+      const existing = s.byId[a.data.id];
+      // A replayed event can be older than the snapshot; never undo a decision.
+      if (existing?.status === 'done' && a.data.status === 'queued') return s;
+      const exists = !!existing;
       let order = exists ? s.order : [...s.order, a.data.id];
       const byId = { ...s.byId, [a.data.id]: a.data };
       if (order.length > KEEP) {
@@ -88,39 +91,72 @@ function reduce(s: Live, a: Action): Live {
   }
 }
 
-/** Initial snapshot from /state, then live updates over server-sent events. */
+const EVENT_TYPES = ['message', 'rule', 'rule-removed', 'metrics', 'swarm', 'replay', 'eval', 'reset'] as const;
+
+/**
+ * Snapshot from /state plus live updates over server-sent events. Events that
+ * arrive while a snapshot is loading are held and replayed on top of it, and the
+ * snapshot is reloaded after a reset or a dropped connection, so nothing is lost.
+ */
 export function useLive(): Live {
   const [state, dispatch] = useReducer(reduce, initial);
 
   useEffect(() => {
-    let source: EventSource | null = null;
     let cancelled = false;
+    let syncing = false;
+    let held: StreamEvent[] = [];
+    let generation = 0;
 
-    const connect = () => {
+    const sync = () => {
+      const mine = ++generation;
+      syncing = true;
+      held = [];
       api
         .state()
-        .then((s) => !cancelled && dispatch({ type: 'init', state: s }))
-        .catch(() => undefined);
-      source = new EventSource(`${apiBase()}/stream`);
-      source.onopen = () => dispatch({ type: 'connected', value: true });
-      source.onerror = () => dispatch({ type: 'connected', value: false });
-      for (const type of ['message', 'rule', 'rule-removed', 'metrics', 'swarm', 'replay', 'eval', 'reset'] as const) {
-        source.addEventListener(type, (e) => {
-          dispatch({ type, data: JSON.parse((e as MessageEvent).data) } as StreamEvent);
-          if (type === 'reset') {
-            api
-              .state()
-              .then((s) => !cancelled && dispatch({ type: 'init', state: s }))
-              .catch(() => undefined);
+        .then((s) => {
+          // A newer sync has started since; let that one win.
+          if (cancelled || mine !== generation) return;
+          dispatch({ type: 'init', state: s });
+          for (const e of held) dispatch(e);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (mine === generation) {
+            syncing = false;
+            held = [];
           }
         });
-      }
     };
 
-    connect();
+    const source = new EventSource(`${apiBase()}/stream`);
+    let dropped = false;
+    source.onopen = () => {
+      dispatch({ type: 'connected', value: true });
+      if (dropped) sync(); // Events were missed while disconnected.
+      dropped = false;
+    };
+    source.onerror = () => {
+      dropped = true;
+      dispatch({ type: 'connected', value: false });
+    };
+    for (const type of EVENT_TYPES) {
+      source.addEventListener(type, (e) => {
+        const event = { type, data: JSON.parse((e as MessageEvent).data) } as StreamEvent;
+        if (type === 'reset') {
+          dispatch(event);
+          sync();
+        } else if (syncing) {
+          held.push(event);
+        } else {
+          dispatch(event);
+        }
+      });
+    }
+    sync();
+
     return () => {
       cancelled = true;
-      source?.close();
+      source.close();
     };
   }, []);
 

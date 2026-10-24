@@ -54,7 +54,7 @@ export function Panel({
   return (
     <section className={clsx('flex min-h-0 flex-col overflow-hidden rounded-tw-lg bg-panel', className)}>
       <header className="flex h-10 shrink-0 items-center justify-between border-b border-line px-3">
-        <h2 className="label flex items-center gap-2 text-fg">
+        <h2 className="label flex items-center gap-2 whitespace-nowrap text-fg">
           {icon}
           {title}
         </h2>
@@ -91,7 +91,7 @@ export function Button({
       disabled={disabled}
       onClick={onClick}
       className={clsx(
-        'inline-flex h-[30px] items-center gap-1.5 px-2.5 text-[13px] font-semibold transition-colors duration-100',
+        'inline-flex h-[30px] shrink-0 items-center gap-1.5 whitespace-nowrap px-2.5 text-[13px] font-semibold transition-colors duration-100',
         pill ? 'rounded-full px-3' : 'rounded-tw',
         'disabled:pointer-events-none disabled:opacity-40',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-soft/60',

@@ -71,17 +71,22 @@ export function DemoMenu({ onNote }: { onNote: (note: string) => void }) {
   };
 
   const reset = async () => {
-    await api.demo('reset');
-    setDone([]);
-    setConfirmReset(false);
-    setOpen(false);
-    onNote('Demo reset: chat, rules and counters cleared');
+    try {
+      await api.demo('reset');
+      setDone([]);
+      onNote('Demo reset: chat, rules and counters cleared');
+    } catch (e) {
+      onNote((e as Error).message);
+    } finally {
+      setConfirmReset(false);
+      setOpen(false);
+    }
   };
 
   return (
     <div ref={ref} className="relative">
       <Button pill variant={open ? 'secondary' : 'ghost'} active={open} onClick={() => setOpen((o) => !o)}>
-        <Clapperboard className="size-4" /> Demo <ChevronDown className="size-3.5" />
+        <Clapperboard className="size-4" /> <span className="max-sm:hidden">Demo</span> <ChevronDown className="size-3.5" />
       </Button>
       <AnimatePresence>
         {open && (

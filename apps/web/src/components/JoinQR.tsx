@@ -38,8 +38,8 @@ export function JoinQR() {
 
   return (
     <>
-      <Button pill onClick={() => setOpen(true)} title="Let the room chat from their phones">
-        <QrCode className="size-4" /> Scan to chat
+      <Button pill onClick={() => setOpen(true)} title="Let the room chat from their phones" className="max-sm:px-2">
+        <QrCode className="size-4" /> <span className="max-sm:hidden">Scan to chat</span>
       </Button>
       <AnimatePresence>
         {open && (

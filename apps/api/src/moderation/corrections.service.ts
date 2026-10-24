@@ -6,6 +6,7 @@ import { EventsService } from '../core/events.service';
 import { MubitService } from '../core/mubit.service';
 import { StoreService } from '../core/store.service';
 import { ModerationService } from './moderation.service';
+import { mask, personalInfo, prescan } from './prescan';
 
 const REPLAY_LIMIT = 24;
 const CANDIDATES = 300;
@@ -60,6 +61,15 @@ export class CorrectionsService {
     this.events.emit({ type: 'rule', data: rule });
 
     message.correction = { action: input.action, reason: input.reason, at: Date.now(), ruleId: rule.id };
+    if (input.action === 'redact') {
+      // Hide the personal details the scanner finds, or the model already marked;
+      // with neither, hide the whole message rather than show something a mod hid.
+      const spans = [
+        ...new Set([...personalInfo(prescan(message.text)), ...(message.decision?.redact ?? [])]),
+      ].filter((s) => s && message.text.includes(s));
+      message.correction.redact = spans.length ? spans : [message.text];
+      message.display = mask(message.text, message.correction.redact);
+    }
     this.store.putMessage(message);
     this.events.emit({ type: 'message', data: message });
     this.store.bump('corrections');

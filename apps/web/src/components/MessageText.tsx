@@ -1,8 +1,8 @@
-import type { ModeratedMessage } from '@quell/shared';
+import { redactedSpans, type ModeratedMessage } from '@quell/shared';
 
 /** Renders a message with redacted spans as solid bars, so nothing leaks on screen. */
 export function MessageText({ m }: { m: ModeratedMessage }) {
-  const spans = m.decision?.action === 'redact' ? m.decision.redact.filter(Boolean) : [];
+  const spans = redactedSpans(m);
   if (!spans.length) return <>{m.text}</>;
 
   const pattern = new RegExp(`(${spans.map(escape).join('|')})`, 'g');
@@ -13,7 +13,7 @@ export function MessageText({ m }: { m: ModeratedMessage }) {
           <span
             key={i}
             title="Redacted"
-            className="mx-px inline-block h-[1.05em] translate-y-[2px] rounded-[3px] bg-redact/25 align-baseline ring-1 ring-inset ring-redact/30"
+            className="mx-px inline-block h-[1.05em] max-w-full translate-y-[2px] rounded-[3px] bg-redact/25 align-baseline ring-1 ring-inset ring-redact/30"
             style={{ width: `${Math.min(part.length, 16) * 0.55}em` }}
           />
         ) : (

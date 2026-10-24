@@ -38,15 +38,25 @@ export function ViewerChat({
   const scroller = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(true);
   const [text, setText] = useState('');
-  const [cooldown, setCooldown] = useState(0);
+  const [slowUntil, setSlowUntil] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   const [sending, setSending] = useState(false);
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [lastSent, setLastSent] = useState<{ id: string; at: number } | null>(null);
+  const noticeId = useRef(0);
+  const cooldown = Math.max(0, Math.ceil((slowUntil - now) / 1000));
+
+  // One clock drives slow mode and the status banner; it stops with the component.
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(t);
+  }, []);
 
   useLayoutEffect(() => {
     if (pinned && scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
-  }, [visible.length, notices.length, pinned]);
+  }, [messages, notices, pinned]);
 
-  const notify = (t: string) => setNotices((n) => [...n.slice(-4), { id: Date.now(), text: t }]);
+  const notify = (t: string) => setNotices((n) => [...n.slice(-4), { id: ++noticeId.current, text: t }]);
 
   const send = async () => {
     const value = text.trim();
@@ -55,10 +65,11 @@ export function ViewerChat({
     try {
       const { id } = await api.ingest(me, value);
       onSent(id);
+      // Timed by this device's clock, so a phone a few seconds off the laptop still works.
+      setLastSent({ id, at: Date.now() });
       setText('');
       setPinned(true);
-      setCooldown(SLOW_MODE_S);
-      const t = setInterval(() => setCooldown((c) => (c <= 1 ? (clearInterval(t), 0) : c - 1)), 1000);
+      setSlowUntil(Date.now() + SLOW_MODE_S * 1000);
     } catch (e) {
       notify((e as Error).message);
     } finally {
@@ -112,7 +123,7 @@ export function ViewerChat({
       </div>
 
       <div className="shrink-0 border-t border-line px-3 pt-2.5 pb-[max(12px,env(safe-area-inset-bottom))]">
-        <LatestStatus messages={messages} mine={mine} />
+        <LatestStatus messages={messages} sent={lastSent} now={now} />
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -127,6 +138,7 @@ export function ViewerChat({
               maxLength={300}
               enterKeyHint="send"
               placeholder="Send a message"
+              aria-label="Send a message"
               className="h-11 min-w-0 flex-1 bg-transparent px-3 text-[16px] text-fg outline-none placeholder:text-faint lg:text-[14px]"
             />
           </div>
@@ -161,15 +173,18 @@ const STATUS_MS = 8000;
  * In a fast chat your own line scrolls away in seconds, so the fate of your latest
  * message stays pinned above the input for a moment.
  */
-function LatestStatus({ messages, mine }: { messages: ModeratedMessage[]; mine: Set<string> }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  const latest = [...messages].reverse().find((m) => mine.has(m.id));
-  if (!latest || now - latest.createdAt > STATUS_MS) return null;
+function LatestStatus({
+  messages,
+  sent,
+  now,
+}: {
+  messages: ModeratedMessage[];
+  sent: { id: string; at: number } | null;
+  now: number;
+}) {
+  if (!sent || now - sent.at > STATUS_MS) return null;
+  const latest = messages.find((m) => m.id === sent.id);
+  if (!latest) return null;
   const action = latest.correction?.action ?? latest.decision?.action;
   const reason = latest.correction?.reason ?? latest.decision?.reason;
 
@@ -180,7 +195,7 @@ function LatestStatus({ messages, mine }: { messages: ModeratedMessage[]; mine: 
     if (action === 'remove') {
       tone = 'bg-remove/10 text-remove';
       icon = <ShieldX className="size-3.5 shrink-0" />;
-      text = `Your message was removed${reason ? ` · ${REASON_LABEL[reason]}` : ''}. Only you can see it.`;
+      text = `Your message was removed${reason && reason !== 'ok' ? ` · ${REASON_LABEL[reason]}` : ''}. Only you can see it.`;
     } else if (action === 'flag') {
       tone = 'bg-flag/10 text-flag';
       icon = <ShieldAlert className="size-3.5 shrink-0" />;
@@ -259,7 +274,7 @@ function Line({ m, own }: { m: ModeratedMessage; own: boolean }) {
       {own && action === 'remove' && (
         <span className="mt-1 flex items-start gap-1.5 rounded-tw bg-remove/10 px-2 py-1.5 text-[12.5px] leading-snug text-remove">
           <ShieldX className="mt-px size-3.5 shrink-0" />
-          Removed by Quell{reason ? ` · ${REASON_LABEL[reason]}` : ''}. Only you can see this.
+          Removed by Quell{reason && reason !== 'ok' ? ` · ${REASON_LABEL[reason]}` : ''}. Only you can see this.
         </span>
       )}
       {own && action === 'redact' && (

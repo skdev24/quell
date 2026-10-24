@@ -16,11 +16,13 @@ export function LearningPanel({
   rules,
   task,
   evaluation,
+  onNote,
 }: {
   metrics: Metrics | null;
   rules: Rule[];
   task: { model: string; fingerprint: string } | null;
   evaluation: EvalRun | null;
+  onNote: (note: string) => void;
 }) {
   const m = metrics;
   return (
@@ -47,7 +49,7 @@ export function LearningPanel({
           </p>
         </div>
 
-        <dl className="mt-2 grid grid-cols-3 gap-2">
+        <dl className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
           <Stat label="Wrongly blocked" value={m ? String(m.wrongfulRemovals) : '—'} tone={m && m.wrongfulRemovals > 0 ? 'text-flag' : undefined} />
           <Stat label="Scams caught" value={m ? `${m.scamsCaught}/${m.scamsTotal}` : '—'} />
           <Stat label="Info hidden" value={m ? `${m.piiRedacted}/${m.piiTotal}` : '—'} />
@@ -97,8 +99,8 @@ export function LearningPanel({
                     </p>
                     <button
                       type="button"
-                      onClick={() => void api.removeRule(r.id)}
-                      className="absolute right-1.5 top-1.5 grid size-5 place-items-center rounded-tw text-faint opacity-0 transition-opacity hover:bg-white/[0.08] hover:text-fg group-hover:opacity-100"
+                      onClick={() => void api.removeRule(r.id).catch((e: Error) => onNote(e.message))}
+                      className="absolute right-1.5 top-1.5 grid size-5 place-items-center rounded-tw text-faint opacity-0 transition-opacity hover:bg-white/[0.08] hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
                       aria-label="Remove rule"
                     >
                       <X className="size-3" />

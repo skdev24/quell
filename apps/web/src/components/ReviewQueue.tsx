@@ -16,12 +16,15 @@ export interface Selection {
   id: string;
   /** Opened from a chat mod icon: start straight in this correction. */
   action?: ModAction;
+  /** When it was opened, so opening the same message again starts a fresh draft. */
+  at: number;
 }
 
 /** Everything the model held, removed or redacted, AutoMod-queue style. */
 export function ReviewQueue({
   needs,
   all,
+  lookup,
   selected,
   selection,
   onClearSelection,
@@ -31,6 +34,8 @@ export function ReviewQueue({
   needs: ModeratedMessage[];
   /** Everything the model held, removed or redacted, to double-check. */
   all: ModeratedMessage[];
+  /** Any message in the channel by id, for cards that have left the lists. */
+  lookup: (id: string) => ModeratedMessage | undefined;
   selected: ModeratedMessage | null;
   selection: Selection | null;
   onClearSelection: () => void;
@@ -38,17 +43,28 @@ export function ReviewQueue({
 }) {
   const [tab, setTab] = useState<'needs' | 'all'>('needs');
   const queue = tab === 'needs' ? needs : all;
+  // Cards with a correction being written stay put, even if they'd drop off the list.
+  const [drafting, setDrafting] = useState<string[]>([]);
   // While the pointer is over the list it holds still; new items wait behind a button.
   const [frozen, setFrozen] = useState<string[] | null>(null);
-  const live = selected && !selected.correction ? [selected, ...queue.filter((m) => m.id !== selected.id)] : queue;
+
+  const pinnedFirst = (list: ModeratedMessage[]) => {
+    const extra = [selected?.id, ...drafting]
+      .filter((id): id is string => !!id && !list.some((m) => m.id === id))
+      .map(lookup)
+      .filter((m): m is ModeratedMessage => !!m);
+    const rest = list.filter((m) => m.id !== selected?.id);
+    const pinned = selected ? [selected] : [];
+    return [...pinned, ...extra.filter((m) => m.id !== selected?.id), ...rest];
+  };
+  const live = pinnedFirst(queue);
   const byId = new Map(live.map((m) => [m.id, m]));
   const items = frozen
-    ? [
-        ...(selected && !selected.correction && !frozen.includes(selected.id) ? [selected] : []),
-        ...frozen.map((id) => byId.get(id)).filter((m): m is ModeratedMessage => !!m),
-      ]
+    ? pinnedFirst(frozen.map((id) => byId.get(id)).filter((m): m is ModeratedMessage => !!m))
     : live;
   const waiting = frozen ? live.filter((m) => !frozen.includes(m.id)).length : 0;
+  const setDraftingFor = (id: string, on: boolean) =>
+    setDrafting((d) => (on ? (d.includes(id) ? d : [...d, id]) : d.filter((x) => x !== id)));
 
   return (
     <Panel
@@ -68,7 +84,7 @@ export function ReviewQueue({
               type="button"
               onClick={() => setTab(id)}
               className={clsx(
-                'h-6 rounded-full px-2.5 text-[12px] font-semibold transition-colors',
+                'h-6 whitespace-nowrap rounded-full px-2.5 text-[12px] font-semibold transition-colors',
                 tab === id ? 'bg-purple text-white' : 'text-dim hover:text-fg',
               )}
             >
@@ -78,6 +94,12 @@ export function ReviewQueue({
         </div>
       }
     >
+      {/* The freeze covers the "new" button too, so reaching for it doesn't unfreeze the list. */}
+      <div
+        className="relative h-full"
+        onPointerEnter={() => setFrozen(live.map((m) => m.id))}
+        onPointerLeave={() => setFrozen(null)}
+      >
       <AnimatePresence>
         {waiting > 0 && (
           <motion.button
@@ -86,17 +108,13 @@ export function ReviewQueue({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             onClick={() => setFrozen(live.map((m) => m.id))}
-            className="absolute left-1/2 top-[50px] z-10 h-[30px] -translate-x-1/2 rounded-full bg-purple px-3 text-[12px] font-semibold text-white shadow-lg shadow-black/50 hover:bg-purple-hover"
+            className="absolute left-1/2 top-2 z-10 h-[30px] -translate-x-1/2 rounded-full bg-purple px-3 text-[12px] font-semibold text-white shadow-lg shadow-black/50 hover:bg-purple-hover"
           >
             <span className="tnum">{waiting}</span> new
           </motion.button>
         )}
       </AnimatePresence>
-      <div
-        className="h-full overflow-y-auto overscroll-contain p-2"
-        onPointerEnter={() => setFrozen(live.map((m) => m.id))}
-        onPointerLeave={() => setFrozen(null)}
-      >
+      <div className="h-full overflow-y-auto overscroll-contain p-2">
         {items.length === 0 && (
           <div className="grid h-full place-items-center px-8 text-center">
             <div>
@@ -117,11 +135,14 @@ export function ReviewQueue({
               m={m}
               pinned={m.id === selected?.id}
               startWith={m.id === selection?.id ? selection.action : undefined}
+              startKey={m.id === selection?.id ? selection.at : undefined}
               onDismiss={m.id === selected?.id ? onClearSelection : undefined}
+              onDrafting={(on) => setDraftingFor(m.id, on)}
               onCorrected={onCorrected}
             />
           ))}
         </AnimatePresence>
+      </div>
       </div>
     </Panel>
   );
@@ -140,20 +161,30 @@ function Card({
   m,
   pinned,
   startWith,
+  startKey,
   onDismiss,
+  onDrafting,
   onCorrected,
 }: {
   m: ModeratedMessage;
   pinned: boolean;
   startWith?: ModAction;
+  startKey?: number;
   onDismiss?: () => void;
+  onDrafting: (on: boolean) => void;
   onCorrected: (note: string) => void;
 }) {
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const [draft, setDraftState] = useState<Draft | null>(null);
   const [rule, setRule] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const d = m.decision;
+  const ruleId = `rule-${m.id}`;
+
+  const setDraft = (next: Draft | null) => {
+    setDraftState(next);
+    onDrafting(next !== null);
+  };
 
   const open = (next: Draft) => {
     setDraft(next);
@@ -161,10 +192,15 @@ function Card({
     setError(null);
   };
 
+  // Re-runs on every open from a chat icon, even for the same message and action.
   useEffect(() => {
     if (startWith) open(defaultDraft(m, startWith));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startWith]);
+  }, [startWith, startKey]);
+
+  // A card that unmounts mid-draft must not stay pinned.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => onDrafting(false), []);
 
   const submit = async () => {
     if (!draft) return;
@@ -174,6 +210,7 @@ function Card({
       const input: CorrectionInput = { ...draft, ruleText: rule };
       const res = await api.correct(m.id, input);
       onCorrected(`Rule added · re-judging ${res.replaying} message${res.replaying === 1 ? '' : 's'} through Mubit`);
+      setDraft(null);
       onDismiss?.();
     } catch (e) {
       setError((e as Error).message);
@@ -195,10 +232,10 @@ function Card({
     >
       <div className="flex items-center gap-2 px-3 pt-2.5">
         <span className={clsx('size-2 rounded-full', tone?.dot ?? 'bg-faint')} />
-        <span className="text-[12px] font-semibold text-fg">
-          {d ? `${ACTION_LABEL[d.action]} · ${REASON_LABEL[d.reason]}` : 'Not judged'}
+        <span className="whitespace-nowrap text-[12px] font-semibold text-fg">
+          {d ? (d.reason === 'ok' ? ACTION_LABEL[d.action] : `${ACTION_LABEL[d.action]} · ${REASON_LABEL[d.reason]}`) : 'Not judged'}
         </span>
-        <span className="text-[12px] text-faint">
+        <span className="min-w-0 truncate text-[12px] text-faint lg:max-xl:hidden">
           {d?.confidence} confidence{m.safetyNet && ' · safety net'}
         </span>
         <span className="ml-auto flex items-center gap-2">
@@ -267,10 +304,11 @@ function Card({
               ))}
             </div>
           )}
-          <label className="label mb-1.5 flex items-center gap-1.5 normal-case tracking-normal">
+          <label htmlFor={ruleId} className="label mb-1.5 flex items-center gap-1.5 normal-case tracking-normal">
             <Sparkles className="size-3.5 text-purple-soft" /> Rule the model will learn
           </label>
           <textarea
+            id={ruleId}
             value={rule}
             onChange={(e) => setRule(e.target.value)}
             rows={3}

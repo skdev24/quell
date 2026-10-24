@@ -27,6 +27,17 @@ export interface ModDecision {
   confidence: Confidence;
 }
 
+/** The action in force: a moderator's correction wins over the model's decision. */
+export function effectiveAction(m: ModeratedMessage): ModAction | undefined {
+  return m.correction?.action ?? m.decision?.action;
+}
+
+/** Substrings to hide for a message, following whichever decision is in force. */
+export function redactedSpans(m: ModeratedMessage): string[] {
+  if (m.correction) return m.correction.action === 'redact' ? m.correction.redact ?? [] : [];
+  return m.decision?.action === 'redact' ? m.decision.redact.filter(Boolean) : [];
+}
+
 /** Seconds a human moderator takes to read and decide one message (an estimate). */
 export const REVIEW_SECONDS = 5;
 
@@ -68,7 +79,8 @@ export interface ModeratedMessage extends ChatMessage {
   /** Identical to a message judged moments ago: decision reused, no model call. */
   cached?: boolean;
   error?: string;
-  correction?: Verdict & { at: number; ruleId?: string };
+  /** A moderator's override. For a redact correction, `redact` lists the spans to hide. */
+  correction?: Verdict & { at: number; ruleId?: string; redact?: string[] };
   /** Set when a correction's replay re-judged this message with new rules. */
   rejudged?: { at: number; before: ModDecision };
 }

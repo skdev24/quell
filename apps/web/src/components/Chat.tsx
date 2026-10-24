@@ -22,21 +22,25 @@ export function Chat({
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(true);
-  const lastCount = useRef(messages.length);
+  const lastId = useRef<string | undefined>(undefined);
   const [unseen, setUnseen] = useState(0);
 
+  // Track the newest message by id, not the count: the list is capped, so its
+  // length stops changing once chat is busy.
   useLayoutEffect(() => {
     const el = scroller.current;
     if (!el) return;
-    const added = messages.length - lastCount.current;
-    lastCount.current = messages.length;
+    const newest = messages[messages.length - 1]?.id;
+    const at = lastId.current ? messages.findIndex((m) => m.id === lastId.current) : -1;
+    const added = newest === lastId.current ? 0 : at >= 0 ? messages.length - 1 - at : messages.length;
+    lastId.current = newest;
     if (pinned) {
       el.scrollTop = el.scrollHeight;
       setUnseen(0);
     } else if (added > 0) {
       setUnseen((n) => n + added);
     }
-  }, [messages.length, pinned]);
+  }, [messages, pinned]);
 
   const chatters = new Set(messages.map((m) => m.author)).size;
 
@@ -112,7 +116,7 @@ function Line({
       )}
     >
       {/* Inline mod actions, like Twitch's mod icons. */}
-      <span className="absolute right-3 top-1 hidden items-center gap-0.5 rounded-tw bg-raised p-0.5 shadow-lg shadow-black/40 group-hover:flex">
+      <span className="absolute right-3 top-1 hidden items-center gap-0.5 rounded-tw bg-raised p-0.5 shadow-lg shadow-black/40 group-focus-within:flex group-hover:flex">
         <ModIcon label="Fine here" onClick={() => onSelect(m.id, 'allow')}>
           <Check className="size-3.5 text-allow" />
         </ModIcon>
@@ -148,7 +152,10 @@ function Line({
           <span className="not-italic"> · removed by Quell</span>
         </span>
       ) : (
-        <span className={clsx('break-words text-fg', m.status === 'queued' && 'checking rounded-[3px] text-dim')}>
+        // Unchecked text is blurred: it may contain personal details not yet redacted.
+        <span
+          className={clsx('break-words text-fg', m.status === 'queued' && 'checking select-none rounded-[3px] text-dim blur-[3px]')}
+        >
           <MessageText m={m} />
         </span>
       )}
@@ -188,16 +195,20 @@ function ModIcon({ label, onClick, children }: { label: string; onClick: () => v
 function ChatInput() {
   const [text, setText] = useState('');
   const [note, setNote] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const send = async () => {
     const value = text.trim();
-    if (!value) return;
+    if (!value || busy) return;
+    setBusy(true);
     try {
       await api.ingest('you', value);
       setText('');
       setNote(null);
     } catch (e) {
       setNote((e as Error).message);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -210,6 +221,7 @@ function ChatInput() {
           onKeyDown={(e) => e.key === 'Enter' && void send()}
           maxLength={300}
           placeholder="Send a message"
+          aria-label="Send a message"
           className="h-10 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-faint"
         />
       </div>
@@ -218,7 +230,8 @@ function ChatInput() {
         <button
           type="button"
           onClick={() => void send()}
-          className="h-[30px] rounded-tw bg-purple px-3 text-[13px] font-semibold text-white hover:bg-purple-hover"
+          disabled={!text.trim() || busy}
+          className="h-[30px] rounded-tw bg-purple disabled:opacity-40 px-3 text-[13px] font-semibold text-white hover:bg-purple-hover"
         >
           Chat
         </button>
