@@ -106,3 +106,40 @@ export function Button({
     </button>
   );
 }
+
+/**
+ * Twitch-style tooltip: a small light label above the control, shown on hover
+ * after a short delay and straight away on keyboard focus.
+ */
+export function Tip({
+  label,
+  align = 'center',
+  children,
+}: {
+  label: string;
+  /** 'end' keeps a tooltip on the last control of a row inside its panel. */
+  align?: 'center' | 'end';
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="group/tip relative inline-flex">
+      {children}
+      <span
+        role="tooltip"
+        className={clsx(
+          'pointer-events-none absolute bottom-full z-30 mb-2 whitespace-nowrap',
+          align === 'center' ? 'left-1/2 -translate-x-1/2' : 'right-0',
+          'rounded-[4px] bg-fg px-2 py-[3px] text-[12px] font-semibold text-bg opacity-0 shadow-lg shadow-black/40 transition-opacity duration-100 group-focus-within/tip:opacity-100 group-hover/tip:opacity-100 group-hover/tip:delay-200',
+        )}
+      >
+        {label}
+        <span
+          className={clsx(
+            'absolute top-full border-4 border-transparent border-t-fg',
+            align === 'center' ? 'left-1/2 -translate-x-1/2' : 'right-[10px]',
+          )}
+        />
+      </span>
+    </span>
+  );
+}

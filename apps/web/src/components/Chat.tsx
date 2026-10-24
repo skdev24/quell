@@ -8,7 +8,7 @@ import type { Ban, ModAction, ModeratedMessage } from '@quell/shared';
 import { api } from '@/lib/api';
 import { ACTION_LABEL, nameColor, timeOf } from '@/lib/verdict';
 import { MessageText } from './MessageText';
-import { Panel } from './primitives';
+import { Panel, Tip } from './primitives';
 
 /** Twitch-style chat column: compact lines, coloured names, mod actions on hover. */
 export function Chat({
@@ -123,25 +123,25 @@ function Line({
         held && 'border-l-2 border-flag/70 bg-flag/[0.06] pl-[18px]',
       )}
     >
-      {/* Inline mod actions, like Twitch's mod icons. */}
-      <span className="absolute right-3 top-1 hidden items-center gap-0.5 rounded-tw bg-raised p-0.5 shadow-lg shadow-black/40 group-focus-within:flex group-hover:flex">
-        <ModIcon label="Fine here" onClick={() => onSelect(m.id, 'allow')}>
-          <Check className="size-3.5 text-allow" />
+      {/* Hover actions, like Twitch's message toolbar: plain icons, colour only on hover. */}
+      <span className="absolute -top-3.5 right-3 z-10 hidden items-center rounded-tw bg-raised p-0.5 shadow-lg shadow-black/50 ring-1 ring-line-strong group-focus-within:flex group-hover:flex">
+        <ModIcon label="Fine here" tone="hover:text-allow" onClick={() => onSelect(m.id, 'allow')}>
+          <Check />
         </ModIcon>
-        <ModIcon label="Remove" onClick={() => onSelect(m.id, 'remove')}>
-          <Trash2 className="size-3.5 text-remove" />
+        <ModIcon label="Remove" tone="hover:text-remove" onClick={() => onSelect(m.id, 'remove')}>
+          <Trash2 />
         </ModIcon>
-        <ModIcon label="Redact" onClick={() => onSelect(m.id, 'redact')}>
-          <EyeOff className="size-3.5 text-redact" />
+        <ModIcon label="Redact" tone="hover:text-redact" onClick={() => onSelect(m.id, 'redact')}>
+          <EyeOff />
         </ModIcon>
         {!ban && (
           <>
-            <span className="mx-0.5 h-4 w-px bg-line-strong" />
-            <ModIcon label="Timeout 10 min" onClick={() => onBan(m.id, 10)}>
-              <Clock className="size-3.5 text-dim" />
+            <span className="mx-0.5 h-4 w-px bg-line-strong" aria-hidden />
+            <ModIcon label="Timeout 10 min" tone="hover:text-flag" onClick={() => onBan(m.id, 10)}>
+              <Clock />
             </ModIcon>
-            <ModIcon label="Ban from chat" onClick={() => onBan(m.id, null)}>
-              <BanIcon className="size-3.5 text-remove" />
+            <ModIcon label="Ban from chat" tone="hover:text-remove" last onClick={() => onBan(m.id, null)}>
+              <BanIcon />
             </ModIcon>
           </>
         )}
@@ -197,17 +197,33 @@ function Line({
   );
 }
 
-function ModIcon({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
+function ModIcon({
+  label,
+  tone,
+  last,
+  onClick,
+  children,
+}: {
+  label: string;
+  tone: string;
+  last?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      onClick={onClick}
-      className="grid size-6 place-items-center rounded-[3px] hover:bg-white/[0.1]"
-    >
-      {children}
-    </button>
+    <Tip label={label} align={last ? 'end' : 'center'}>
+      <button
+        type="button"
+        aria-label={label}
+        onClick={onClick}
+        className={clsx(
+          'grid size-7 place-items-center rounded-[3px] text-dim transition-colors hover:bg-white/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-soft/60 [&>svg]:size-4',
+          tone,
+        )}
+      >
+        {children}
+      </button>
+    </Tip>
   );
 }
 
