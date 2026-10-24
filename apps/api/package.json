@@ -6,7 +6,8 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "feed": "node scripts/feed.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",

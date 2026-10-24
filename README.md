@@ -20,6 +20,21 @@ pnpm dev                                  # API on :4000, web on :3100
 - Crowd page (phones on the same Wi-Fi): `http://<laptop-ip>:3100/join`
 - Clean slate before a demo: `pnpm reset` (keeps `apps/api/data/task.lock`)
 
+## Feeding Mubit's reviewer
+
+Mubit's reviewer reads a limited number of new calls per task per day (200 in this
+project's settings), resetting at 00:00 UTC. `scripts/feed.mjs` spends that budget on
+good examples: it waits for the reset, then sends fresh, unique, labelled messages
+through the exact same task (it imports the compiled `frozen.ts`, so the fingerprint
+matches), never repeating anything already sent or anything in the held-out benchmark set.
+
+```bash
+pnpm --filter @quell/api build
+cd apps/api && nohup caffeinate -is node scripts/feed.mjs --count=230 > data/feed.log 2>&1 &
+```
+
+`--now` sends immediately, `--dry-run` builds the calls without sending.
+
 ## How it fits together
 
 | Part | Where | Notes |

@@ -12,3 +12,5 @@ research/nightshift-mubit-handoff.md
 research/docs/
 research/results/
 .claude/
+apps/api/data/feed-sent.json
+apps/api/data/feed.log
