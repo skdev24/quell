@@ -34,6 +34,8 @@ export const api = {
   raid: (count = 150) => call<{ posted: number }>('/swarm/raid', { method: 'POST', body: JSON.stringify({ count }) }),
   ingest: (author: string, text: string, device?: string) =>
     call<{ id: string }>('/ingest', { method: 'POST', body: JSON.stringify({ author, text, device }) }),
+  /** The moderator speaking in chat: badged, and not sent to the model. */
+  say: (text: string) => call<{ id: string }>('/mod/say', { method: 'POST', body: JSON.stringify({ text }) }),
   /** Minutes for a timeout; null bans until a moderator lifts it. */
   ban: (messageId: string, minutes: number | null) =>
     call<Ban>(`/messages/${messageId}/ban`, { method: 'POST', body: JSON.stringify({ minutes }) }),

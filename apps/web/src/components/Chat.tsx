@@ -8,6 +8,7 @@ import type { Ban, ModAction, ModeratedMessage } from '@quell/shared';
 import { api } from '@/lib/api';
 import { ACTION_LABEL, nameColor, timeOf } from '@/lib/verdict';
 import { MessageText } from './MessageText';
+import { SourceBadge } from './Badge';
 import { Panel, Tip } from './primitives';
 
 /** Twitch-style chat column: compact lines, coloured names, mod actions on hover. */
@@ -123,8 +124,10 @@ function Line({
         held && 'border-l-2 border-flag/70 bg-flag/[0.06] pl-[18px]',
       )}
     >
-      {/* Hover actions, like Twitch's message toolbar: plain icons, colour only on hover. */}
-      <span className="absolute -top-3.5 right-3 z-10 hidden items-center rounded-tw bg-raised p-0.5 shadow-lg shadow-black/50 ring-1 ring-line-strong group-focus-within:flex group-hover:flex">
+      {/* Hover actions, like Twitch's message toolbar: plain icons, colour only on hover.
+          Centred on the line itself; a moderator's own messages get none. */}
+      {m.source !== 'mod' && (
+      <span className="absolute right-2 top-1/2 z-10 hidden -translate-y-1/2 items-center gap-px rounded-tw bg-raised p-0.5 shadow-lg shadow-black/50 ring-1 ring-line-strong group-focus-within:flex group-hover:flex">
         <ModIcon label="Fine here" tone="hover:text-allow" onClick={() => onSelect(m.id, 'allow')}>
           <Check />
         </ModIcon>
@@ -146,24 +149,24 @@ function Line({
           </>
         )}
       </span>
+      )}
 
       <span className="tnum mr-1.5 text-[12px] text-faint">{timeOf(m.createdAt).slice(0, 5)}</span>
-      {m.source === 'crowd' && (
-        <span
-          title="Posted from the room"
-          className="mr-1 inline-grid size-[18px] translate-y-[3px] place-items-center rounded-[3px] bg-purple text-[10px] font-bold text-white"
-        >
-          ★
+      <SourceBadge source={m.source} />
+      {m.source === 'mod' ? (
+        <span className="font-bold" style={{ color: nameColor(m.author) }}>
+          {m.author}
         </span>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onSelect(m.id)}
+          className="font-bold hover:underline"
+          style={{ color: nameColor(m.author) }}
+        >
+          {m.author}
+        </button>
       )}
-      <button
-        type="button"
-        onClick={() => onSelect(m.id)}
-        className="font-bold hover:underline"
-        style={{ color: nameColor(m.author) }}
-      >
-        {m.author}
-      </button>
       <span className="text-fg">: </span>
       {removed ? (
         <span className="italic text-faint">
@@ -217,7 +220,7 @@ function ModIcon({
         aria-label={label}
         onClick={onClick}
         className={clsx(
-          'grid size-7 place-items-center rounded-[3px] text-dim transition-colors hover:bg-white/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-soft/60 [&>svg]:size-4',
+          'grid size-6 place-items-center rounded-[3px] text-dim transition-colors hover:bg-white/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-soft/60 [&>svg]:size-[15px]',
           tone,
         )}
       >
@@ -238,7 +241,7 @@ function ChatInput() {
     if (!value || busy) return;
     setBusy(true);
     try {
-      await api.ingest('you', value);
+      await api.say(value);
       setText('');
       setNote(null);
     } catch (e) {

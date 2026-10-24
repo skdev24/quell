@@ -18,7 +18,7 @@ import { randomUUID } from 'node:crypto';
 import { networkInterfaces } from 'node:os';
 import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from 'obscenity';
 import { Observable, map, merge, interval } from 'rxjs';
-import { banKey, type Ban, type CorrectionInput, type LiveState, type SwarmState } from '@quell/shared';
+import { MOD_NAME, banKey, type Ban, type CorrectionInput, type LiveState, type SwarmState } from '@quell/shared';
 import { CHANNEL } from './core/community';
 import { EventsService } from './core/events.service';
 import { StoreService } from './core/store.service';
@@ -98,11 +98,28 @@ export class ApiController {
     return { id: m.id };
   }
 
+  /**
+   * The moderator speaking in chat. Like Twitch, mods aren't held by AutoMod, so
+   * this skips the model: no call, and nothing for Mubit to learn from.
+   */
+  @Post('mod/say')
+  say(@Body() body: { text?: string }) {
+    const text = (body.text ?? '').trim();
+    if (!text) throw new BadRequestException('Message is empty.');
+    if (text.length > MAX_LENGTH) throw new BadRequestException(`Keep it under ${MAX_LENGTH} characters.`);
+    const m = { id: randomUUID(), channel: CHANNEL, author: MOD_NAME, text, source: 'mod' as const, createdAt: Date.now() };
+    const done = { ...m, status: 'done' as const };
+    this.store.putMessage(done);
+    this.events.emit({ type: 'message', data: done });
+    return { id: m.id };
+  }
+
   /** Times out (minutes) or bans (no minutes) whoever posted a message. They can still watch. */
   @Post('messages/:id/ban')
   ban(@Param('id') id: string, @Body() body: { minutes?: number | null }) {
     const m = this.store.getMessage(id);
     if (!m) throw new NotFoundException('No such message.');
+    if (m.source === 'mod') throw new BadRequestException("Moderators can't be timed out or banned.");
     const minutes = Number(body?.minutes);
     const ban: Ban = {
       id: banKey(m.author, m.device),

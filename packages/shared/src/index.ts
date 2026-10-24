@@ -51,7 +51,10 @@ export interface Verdict {
   reason: ModReason;
 }
 
-export type MessageSource = 'swarm' | 'crowd';
+export type MessageSource = 'swarm' | 'crowd' | 'mod';
+
+/** The name the moderator chats under from the mod view. */
+export const MOD_NAME = 'shipyard_mod';
 
 export interface ChatMessage {
   id: string;

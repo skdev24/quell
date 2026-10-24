@@ -6,6 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { findBan, type Ban, type ModeratedMessage } from '@quell/shared';
 import { api } from '@/lib/api';
 import { REASON_LABEL, nameColor, timeOf } from '@/lib/verdict';
+import { SourceBadge } from '../Badge';
 import { MessageText, mentions } from '../MessageText';
 
 const SLOW_MODE_S = 3;
@@ -300,7 +301,7 @@ function LatestStatus({
 
 /** What a viewer may see. Senders always see their own messages and their fate. */
 function isVisible(m: ModeratedMessage, own: boolean): boolean {
-  if (own) return true;
+  if (own || m.source === 'mod') return true;
   if (m.status !== 'done') return false;
   const action = m.correction?.action ?? m.decision?.action;
   return action === 'allow' || action === 'redact';
@@ -321,14 +322,7 @@ function Line({ m, own, mentioned }: { m: ModeratedMessage; own: boolean; mentio
       )}
     >
       <span className="tnum mr-1.5 text-[12px] text-faint">{timeOf(m.createdAt).slice(0, 5)}</span>
-      {m.source === 'crowd' && (
-        <span
-          title="Watching in the room"
-          className="mr-1 inline-grid size-[18px] translate-y-[3px] place-items-center rounded-[3px] bg-purple text-[10px] font-bold text-white"
-        >
-          ★
-        </span>
-      )}
+      <SourceBadge source={m.source} />
       <span className="font-bold" style={{ color: nameColor(m.author) }}>
         {m.author}
       </span>
