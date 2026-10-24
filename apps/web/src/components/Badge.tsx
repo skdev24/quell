@@ -9,8 +9,8 @@ import { Tip } from './primitives';
 export function SourceBadge({ source }: { source: MessageSource }) {
   if (source === 'mod') {
     return (
-      <Tip label="Moderator">
-        <span className="mr-1 inline-grid size-[18px] translate-y-[3px] place-items-center rounded-[3px] bg-[#00ad03] text-white">
+      <Tip label="Moderator" className="mr-1 align-middle">
+        <span className="-mt-[3px] inline-grid size-[18px] place-items-center rounded-[3px] bg-[#00ad03] text-white">
           <Sword className="size-3" strokeWidth={2.5} />
         </span>
       </Tip>
@@ -18,8 +18,8 @@ export function SourceBadge({ source }: { source: MessageSource }) {
   }
   if (source === 'crowd') {
     return (
-      <Tip label="Watching in the room">
-        <span className="mr-1 inline-grid size-[18px] translate-y-[3px] place-items-center rounded-[3px] bg-purple text-[10px] font-bold text-white">
+      <Tip label="Watching in the room" className="mr-1 align-middle">
+        <span className="-mt-[3px] inline-grid size-[18px] place-items-center rounded-[3px] bg-purple text-[10px] font-bold text-white">
           ★
         </span>
       </Tip>

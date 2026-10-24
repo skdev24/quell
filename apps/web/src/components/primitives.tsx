@@ -114,15 +114,17 @@ export function Button({
 export function Tip({
   label,
   align = 'center',
+  className,
   children,
 }: {
   label: string;
+  className?: string;
   /** 'end' keeps a tooltip on the last control of a row inside its panel. */
   align?: 'center' | 'end';
   children: React.ReactNode;
 }) {
   return (
-    <span className="group/tip relative inline-flex">
+    <span className={clsx('group/tip relative inline-flex', className)}>
       {children}
       <span
         role="tooltip"
