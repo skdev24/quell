@@ -21,7 +21,8 @@
   <a href="#how-it-works">How it works</a> ·
   <a href="#results">Results</a> ·
   <a href="#architecture">Architecture</a> ·
-  <a href="#getting-started">Getting started</a>
+  <a href="#getting-started">Getting started</a> ·
+  <a href="#documentation">Documentation</a>
 </p>
 
 <br />
@@ -120,6 +121,18 @@ In live test sessions:
 | Simulated chat | [`swarm/`](apps/api/src/swarm) | Labelled personas for load and for measuring agreement. |
 | Web app | [`apps/web`](apps/web) | Next.js 15, Tailwind CSS 4 and Motion, updated over server-sent events. |
 
+## Documentation
+
+[Read the documentation site](https://mosnfar.github.io/cubit/), built directly from the Markdown in `docs/`.
+
+- [API reference](docs/api-reference.md) — HTTP endpoints, examples, errors, rate limits and live events.
+- [Operations guide](docs/operations.md) — Production startup, configuration, backups, resets and task recovery.
+- [Data-handling guide](docs/data-handling.md) — Local storage, Mubit requests, training, retention and deletion.
+- [Documentation site](docs/docs-site.md) — Fumadocs development, static builds and GitHub Pages deployment.
+
+Run `pnpm dev:docs` for the documentation site on http://localhost:3200, or
+`pnpm build:docs` to export it to `docs/out`.
+
 ## Getting started
 
 Requires Node.js 24 and pnpm 10.
@@ -157,7 +170,7 @@ house-rule messages, follow-up messages after correction, a scam wave and a raid
 apps/api         NestJS API: moderation, corrections, benchmark, simulated chat
 apps/web         Next.js app: moderator view at /, viewer page at /join
 packages/shared  Types shared by the API and the web app
-docs             README images and the pages they are rendered from
+docs             Markdown guides, Fumadocs app, README images and showcase pages
 scripts          Screenshot tooling
 ```
 
