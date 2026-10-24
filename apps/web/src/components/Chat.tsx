@@ -27,8 +27,11 @@ export function Chat({
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(true);
+  // Like Twitch, chat holds still while a mouse is over it, so mod actions land.
+  const [hovering, setHovering] = useState(false);
   const lastId = useRef<string | undefined>(undefined);
   const [unseen, setUnseen] = useState(0);
+  const following = pinned && !hovering;
 
   // Track the newest message by id, not the count: the list is capped, so its
   // length stops changing once chat is busy.
@@ -39,13 +42,13 @@ export function Chat({
     const at = lastId.current ? messages.findIndex((m) => m.id === lastId.current) : -1;
     const added = newest === lastId.current ? 0 : at >= 0 ? messages.length - 1 - at : messages.length;
     lastId.current = newest;
-    if (pinned) {
+    if (following) {
       el.scrollTop = el.scrollHeight;
       setUnseen(0);
     } else if (added > 0) {
       setUnseen((n) => n + added);
     }
-  }, [messages, pinned]);
+  }, [messages, following]);
 
   const chatters = new Set(messages.map((m) => m.author)).size;
 
@@ -63,6 +66,8 @@ export function Chat({
       <div className="flex h-full flex-col">
         <div
           ref={scroller}
+          onPointerEnter={(e) => e.pointerType === 'mouse' && setHovering(true)}
+          onPointerLeave={() => setHovering(false)}
           onScroll={(e) => {
             const el = e.currentTarget;
             setPinned(el.scrollHeight - el.scrollTop - el.clientHeight < 40);
@@ -78,7 +83,7 @@ export function Chat({
         </div>
 
         <AnimatePresence>
-          {!pinned && (
+          {(!pinned || unseen > 0) && (
             <motion.button
               type="button"
               initial={{ opacity: 0, y: 6 }}
@@ -88,7 +93,11 @@ export function Chat({
               className="absolute bottom-[86px] left-1/2 inline-flex h-[30px] -translate-x-1/2 items-center gap-1.5 rounded-full bg-raised px-3 text-[12px] font-semibold text-fg shadow-lg shadow-black/50 hover:bg-hover"
             >
               <ArrowDown className="size-3.5" />
-              {unseen > 0 ? `${unseen} new messages` : 'Chat paused due to scroll'}
+              {!pinned
+                ? unseen > 0
+                  ? `${unseen} new messages`
+                  : 'Chat paused due to scroll'
+                : 'Chat paused due to mouse hover'}
             </motion.button>
           )}
         </AnimatePresence>
