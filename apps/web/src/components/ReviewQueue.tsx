@@ -2,7 +2,7 @@
 
 import clsx from 'clsx';
 import { AnimatePresence, motion } from 'motion/react';
-import { Ban as BanIcon, Check, Clock, EyeOff, Flag, Loader2, ShieldAlert, Sparkles, Trash2, X } from 'lucide-react';
+import { Ban as BanIcon, Check, Clock, Cpu, EyeOff, Flag, Loader2, ShieldAlert, Sparkles, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Ban, CorrectionInput, ModAction, ModReason, ModeratedMessage } from '@quell/shared';
 import { api } from '@/lib/api';
@@ -284,6 +284,25 @@ function Card({
           <MessageText m={m} />
         </span>
       </p>
+
+      {/* Which model Mubit says answered this call, and its id in the Mubit console. */}
+      {(m.servedBy || m.cached) && (
+        <p className="mx-3 mt-1.5 flex items-center gap-1.5 text-[11px] text-faint">
+          <Cpu className="size-3 shrink-0" />
+          {m.cached ? (
+            'Duplicate · decision reused, no model call'
+          ) : (
+            <>
+              Served by <span className="font-mono text-dim">{m.servedBy}</span>
+              {m.mubitRequestId && (
+                <span className="truncate font-mono" title="Mubit request id">
+                  · {m.mubitRequestId}
+                </span>
+              )}
+            </>
+          )}
+        </p>
+      )}
 
       {!draft ? (
         <div className="flex flex-wrap items-center gap-1 px-3 pb-3 pt-2.5">

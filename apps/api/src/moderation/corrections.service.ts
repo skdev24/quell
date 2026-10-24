@@ -127,7 +127,13 @@ export class CorrectionsService {
           // The channel only shows re-judgements that follow what the moderator taught.
           if (!t.correction && t.decision && t.decision.action !== taught && j.decision.action === taught) {
             t.rejudged = { at: Date.now(), before: t.decision };
-            Object.assign(t, { decision: j.decision, display: j.display, safetyNet: j.safetyNet });
+            Object.assign(t, {
+              decision: j.decision,
+              display: j.display,
+              safetyNet: j.safetyNet,
+              servedBy: j.servedBy,
+              mubitRequestId: j.mubitRequestId,
+            });
             this.store.putMessage(t);
             this.events.emit({ type: 'message', data: t });
           }

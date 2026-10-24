@@ -25,6 +25,9 @@ export interface Judgement {
   safetyNet: boolean;
   latencyMs: number;
   usage: { tokensIn: number; tokensOut: number; costUsd: number | null };
+  /** What Mubit reports for the call: the model that answered, and its request id. */
+  servedBy?: string;
+  mubitRequestId?: string;
 }
 
 /**
@@ -102,6 +105,8 @@ export class ModerationService {
       safetyNet: j.safetyNet,
       latencyMs: cached ? 0 : j.latencyMs,
       cached: cached || undefined,
+      servedBy: j.servedBy,
+      mubitRequestId: cached ? undefined : j.mubitRequestId,
     });
     this.store.putMessage(m);
     this.events.emit({ type: 'message', data: m });
@@ -190,6 +195,7 @@ export class ModerationService {
 
     const started = Date.now();
     let res;
+    let mubitRequestId: string | undefined;
     if (opts.openRouterModel) {
       // Same prompt on an open model via OpenRouter (still through Mubit).
       res = await this.mubit.openrouter.chat.completions
@@ -202,16 +208,20 @@ export class ModerationService {
           ),
         );
     } else {
-      res = await this.mubit.client.chat.completions.create(
-        {
-          model: TASK_MODEL,
-          messages,
-          response_format: RESPONSE_FORMAT,
-          // Settings don't split a Mubit task; this keeps a reasoning model fast enough for chat.
-          reasoning_effort: 'none' as 'low',
-        },
-        { headers },
-      );
+      const { data, response } = await this.mubit.client.chat.completions
+        .create(
+          {
+            model: TASK_MODEL,
+            messages,
+            response_format: RESPONSE_FORMAT,
+            // Settings don't split a Mubit task; this keeps a reasoning model fast enough for chat.
+            reasoning_effort: 'none' as 'low',
+          },
+          { headers },
+        )
+        .withResponse();
+      res = data;
+      mubitRequestId = response.headers.get('x-middleware-request-id') ?? undefined;
     }
     const latencyMs = Date.now() - started;
     const usage = {
@@ -240,7 +250,8 @@ export class ModerationService {
     }
 
     const display = decision.action === 'redact' ? mask(m.text, decision.redact) : m.text;
-    return { decision, display, safetyNet, latencyMs, usage };
+    // Mubit names the model that actually answered: the provider today, a trained adapter once it serves.
+    return { decision, display, safetyNet, latencyMs, usage, servedBy: res.model, mubitRequestId };
   }
 }
 

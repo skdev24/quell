@@ -119,6 +119,10 @@ export interface ModeratedMessage extends ChatMessage {
   correction?: Verdict & { at: number; ruleId?: string; redact?: string[] };
   /** Set when a correction's replay re-judged this message with new rules. */
   rejudged?: { at: number; before: ModDecision };
+  /** The model Mubit says answered the call: the provider model, or a trained adapter once it serves. */
+  servedBy?: string;
+  /** Mubit's id for the call, as shown in its console. */
+  mubitRequestId?: string;
 }
 
 export interface Rule {
@@ -162,6 +166,8 @@ export interface Metrics {
   /** Corrected calls replayed through Mubit (become kept examples). */
   trainingExamples: number;
   rules: number;
+  /** Model calls by the model that answered them (cached duplicates excluded). */
+  servedBy: Record<string, number>;
   /** Per-minute accuracy over the session, oldest first. */
   accuracySeries: number[];
 }

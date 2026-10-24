@@ -156,6 +156,7 @@ export function LearningPanel({
             </div>
             <dl className="mt-2 space-y-1 text-[12px]">
               <Row k="Teacher" v={task.model} />
+              <ServedBy servedBy={m?.servedBy ?? {}} teacher={task.model} />
               <Row k="Fingerprint" v={task.fingerprint} />
               <Row k="Tokens" v={m ? `${fmt(m.tokensIn)} in · ${fmt(m.tokensOut)} out` : '—'} />
             </dl>
@@ -217,6 +218,37 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: str
     <div className="rounded-tw-lg bg-raised px-3 py-2.5">
       <dt className="truncate text-[11px] font-semibold text-dim">{label}</dt>
       <dd className={clsx('tnum mt-0.5 text-[18px] font-bold tracking-[-0.01em] text-fg', tone)}>{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * Who answered the moderation calls, from the model name Mubit returns on each
+ * response: the teacher today, the trained adapter once Mubit promotes it.
+ */
+function ServedBy({ servedBy, teacher }: { servedBy: Record<string, number>; teacher: string }) {
+  const total = Object.values(servedBy).reduce((a, b) => a + b, 0);
+  const byTeacher = Object.entries(servedBy)
+    .filter(([model]) => model === teacher || model.startsWith(`${teacher}-`))
+    .reduce((a, [, n]) => a + n, 0);
+  const byAdapter = total - byTeacher;
+  const pct = (n: number) => (total ? `${Math.round((n / total) * 100)}%` : '—');
+  return (
+    <div className="pt-1">
+      <div className="flex justify-between gap-3">
+        <dt className="text-dim">Answered by</dt>
+        <dd className="font-mono text-[11.5px] text-fg">
+          GPT {pct(byTeacher)} · <span className="text-purple-soft">your adapter {pct(byAdapter)}</span>
+        </dd>
+      </div>
+      <div className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+        <div className="bg-dim/60" style={{ width: total ? `${(byTeacher / total) * 100}%` : '0%' }} />
+        <div className="bg-purple" style={{ width: total ? `${(byAdapter / total) * 100}%` : '0%' }} />
+      </div>
+      <p className="mt-1 text-[11px] text-faint">
+        From the model Mubit reports on each of {total} call{total === 1 ? '' : 's'}. Adapter v1 is in a silent
+        test; it takes over here once Mubit promotes it.
+      </p>
     </div>
   );
 }

@@ -54,6 +54,9 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
+    const servedBy: Record<string, number> = {};
+    for (const m of done) if (!m.cached && m.servedBy) servedBy[m.servedBy] = (servedBy[m.servedBy] ?? 0) + 1;
+
     const needsReview = done.filter((m) => !m.correction && needsHuman(m.decision!)).length;
     const autoHandled = done.length - needsReview - done.filter((m) => m.correction).length;
 
@@ -84,6 +87,7 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
       corrections: this.store.counters.corrections,
       trainingExamples: this.store.counters.trainingExamples,
       rules: this.store.rules.length,
+      servedBy,
       accuracySeries: series,
     };
   }
