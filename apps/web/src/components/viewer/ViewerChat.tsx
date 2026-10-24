@@ -6,7 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { findBan, type Ban, type ModeratedMessage } from '@quell/shared';
 import { api } from '@/lib/api';
 import { REASON_LABEL, nameColor, timeOf } from '@/lib/verdict';
-import { MessageText } from '../MessageText';
+import { MessageText, mentions } from '../MessageText';
 
 const SLOW_MODE_S = 3;
 
@@ -61,6 +61,16 @@ export function ViewerChat({
     if (pinned && scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
   }, [messages, notices, pinned]);
 
+  // Twitch-style @ completion: chatters seen recently whose name starts with what's typed.
+  const typing = /(?:^|\s)@([A-Za-z0-9_]*)$/.exec(text)?.[1];
+  const suggestions =
+    typing === undefined
+      ? []
+      : [...new Set([...visible].reverse().map((m) => m.author))]
+          .filter((a) => a !== me && /^[A-Za-z0-9_]+$/.test(a) && a.toLowerCase().startsWith(typing.toLowerCase()))
+          .slice(0, 5);
+  const complete = (name: string) => setText((t) => t.replace(/@[A-Za-z0-9_]*$/, `@${name} `));
+
   const notify = (t: string) => setNotices((n) => [...n.slice(-4), { id: ++noticeId.current, text: t }]);
 
   const send = async () => {
@@ -105,7 +115,7 @@ export function ViewerChat({
         >
           <p className="px-3 pb-1 text-[13px] text-dim">Welcome to the chat room!</p>
           {visible.map((m) => (
-            <Line key={m.id} m={m} own={mine.has(m.id)} />
+            <Line key={m.id} m={m} own={mine.has(m.id)} mentioned={!mine.has(m.id) && mentions(m.text, me)} />
           ))}
           {notices.map((n) => (
             <p key={n.id} className="px-3 py-1 text-[13px] italic text-dim">
@@ -129,6 +139,31 @@ export function ViewerChat({
 
       <div className="shrink-0 border-t border-line px-3 pt-2.5 pb-[max(12px,env(safe-area-inset-bottom))]">
         <LatestStatus messages={messages} sent={lastSent} now={now} />
+        {!ban && suggestions.length > 0 && (
+          <ul
+            role="listbox"
+            aria-label="Mention someone"
+            className="mb-2 overflow-hidden rounded-tw bg-raised py-1 shadow-lg shadow-black/50 ring-1 ring-line-strong"
+          >
+            {suggestions.map((name, i) => (
+              <li key={name} role="option" aria-selected={i === 0}>
+                <button
+                  type="button"
+                  // Keeps focus (and the phone keyboard) in the input.
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={() => complete(name)}
+                  className={clsx(
+                    'flex h-9 w-full items-center px-3 text-left text-[14px] font-bold hover:bg-white/[0.08] lg:h-8 lg:text-[13px]',
+                    i === 0 && 'bg-white/[0.06]',
+                  )}
+                  style={{ color: nameColor(name) }}
+                >
+                  {name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         {ban ? (
           <BanNotice ban={ban} now={now} />
         ) : (
@@ -143,6 +178,13 @@ export function ViewerChat({
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (suggestions.length && (e.key === 'Tab' || e.key === 'Enter')) {
+                  e.preventDefault();
+                  complete(suggestions[0]);
+                }
+              }}
+              autoComplete="off"
               maxLength={300}
               enterKeyHint="send"
               placeholder="Send a message"
@@ -264,13 +306,20 @@ function isVisible(m: ModeratedMessage, own: boolean): boolean {
   return action === 'allow' || action === 'redact';
 }
 
-function Line({ m, own }: { m: ModeratedMessage; own: boolean }) {
+function Line({ m, own, mentioned }: { m: ModeratedMessage; own: boolean; mentioned: boolean }) {
   const action = m.correction?.action ?? m.decision?.action;
   const reason = m.correction?.reason ?? m.decision?.reason;
   const blocked = own && (action === 'remove' || action === 'flag');
 
   return (
-    <div className={clsx('px-3 py-[5px] text-[14px] leading-[22px] lg:text-[13px] lg:leading-5', own && 'bg-white/[0.04]')}>
+    <div
+      className={clsx(
+        'px-3 py-[5px] text-[14px] leading-[22px] lg:text-[13px] lg:leading-5',
+        own && 'bg-white/[0.04]',
+        // Like Twitch, a line that @mentions you stands out.
+        mentioned && 'border-l-2 border-purple bg-purple/[0.14] pl-[10px]',
+      )}
+    >
       <span className="tnum mr-1.5 text-[12px] text-faint">{timeOf(m.createdAt).slice(0, 5)}</span>
       {m.source === 'crowd' && (
         <span
