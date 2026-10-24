@@ -7,10 +7,8 @@ dist
 apps/api/data/*.db*
 .DS_Store
 
-# Personal notes and raw research output stay local
-research/nightshift-mubit-handoff.md
-research/docs/
-research/results/
+# Working notes, kept local
+research/
 .claude/
 apps/api/data/feed-sent.json
 apps/api/data/feed.log
