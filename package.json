@@ -10,5 +10,8 @@
     "build": "pnpm build:shared && pnpm --filter @quell/api build && pnpm --filter @quell/web build",
     "typecheck": "pnpm -r typecheck",
     "reset": "rm -f apps/api/data/quell.db apps/api/data/quell.db-wal apps/api/data/quell.db-shm && echo 'Session data cleared (task.lock kept).'"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.43.1"
   }
 }

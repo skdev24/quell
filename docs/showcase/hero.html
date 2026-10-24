@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Quell hero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1600px; height: 900px; }
+  body {
+    font-family: Inter, system-ui, sans-serif;
+    color: #efeff1;
+    background:
+      radial-gradient(900px 600px at 10% 0%, rgba(145, 71, 255, 0.35), transparent 60%),
+      radial-gradient(700px 500px at 100% 100%, rgba(31, 105, 255, 0.22), transparent 60%),
+      #0e0e10;
+    overflow: hidden;
+    position: relative;
+  }
+  .grid {
+    position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at 30% 40%, black 30%, transparent 75%);
+  }
+  .copy { position: absolute; left: 88px; top: 96px; width: 500px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand span { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 36px;
+    padding: 6px 12px; border-radius: 999px; background: rgba(145,71,255,.16); color: #bf94ff;
+    font-size: 15px; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(191,148,255,.3);
+  }
+  h1 { margin-top: 20px; font-size: 54px; line-height: 1.04; font-weight: 800; letter-spacing: -0.035em; }
+  h1 em { font-style: normal; background: linear-gradient(90deg, #bf94ff, #9147ff); -webkit-background-clip: text; color: transparent; }
+  p.lead { margin-top: 20px; font-size: 19px; line-height: 1.5; color: #adadb8; }
+  .stats { margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stat { padding: 16px 18px; border-radius: 12px; background: rgba(24,24,27,.85); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+  .stat b { display: block; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+  .stat span { display: block; margin-top: 2px; font-size: 14px; color: #adadb8; }
+  .stat b.up { color: #00e58a; }
+  .browser {
+    position: absolute; left: 700px; top: 96px; width: 1060px; border-radius: 14px; overflow: hidden;
+    background: #18181b; box-shadow: 0 40px 120px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.1);
+  }
+  .bar { height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: #1f1f23; }
+  .bar i { width: 11px; height: 11px; border-radius: 50%; display: block; }
+  .bar .url { margin-left: 16px; height: 22px; flex: 0 0 340px; border-radius: 6px; background: #0e0e10; color: #848494; font-size: 12px; display: flex; align-items: center; padding: 0 10px; }
+  .browser img { display: block; width: 100%; }
+  .phone {
+    position: absolute; left: 640px; top: 300px; width: 268px; border-radius: 44px; padding: 10px;
+    background: #050505; box-shadow: 0 40px 100px rgba(0,0,0,.8), 0 0 0 2px #2a2a30;
+  }
+  .phone img { display: block; width: 100%; border-radius: 34px; }
+  .notch { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 86px; height: 24px; border-radius: 14px; background: #050505; }
+  .foot { margin-top: 26px; font-size: 14px; line-height: 1.55; color: #848494; }
+  .foot b { color: #efeff1; }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="copy">
+    <div class="brand">
+      <svg width="44" height="44" viewBox="0 0 26 26"><rect width="26" height="26" rx="6" fill="#9147ff"/><path d="M6.5 13.5c3-4.4 10-4.4 13 0" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M10 17.2c1.7-1.9 4.3-1.9 6 0" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>
+      <span>Quell</span>
+    </div>
+    <div class="pill">Built on Mubit · Night Shift London</div>
+    <h1>Live-chat moderation that <em>learns your community</em></h1>
+    <p class="lead">Every correction a moderator makes becomes a rule today and training data for a model you own tomorrow.</p>
+    <div class="stats">
+      <div class="stat"><b>~90%</b><span>of chat handled with no moderator</span></div>
+      <div class="stat"><b class="up">83% → 90%</b><span>agreement after 4 corrections</span></div>
+      <div class="stat"><b>4 / 4</b><span>new look-alikes right after teaching</span></div>
+      <div class="stat"><b>~2 calls</b><span>to clear a 120-message raid</span></div>
+    </div>
+    <div class="foot">Every LLM call routed through <b>Mubit</b> · one frozen task ·<br />an open Qwen3 adapter trained on your corrections</div>
+  </div>
+  <div class="browser">
+    <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">quell · mod view</div></div>
+    <img src="../images/mod-view.png" alt="" />
+  </div>
+  <div class="phone"><div class="notch"></div><img src="../images/viewer-phone.png" alt="" /></div>
+</body>
+</html>
