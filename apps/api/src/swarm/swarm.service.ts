@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import type { ChatMessage, SwarmState } from '@quell/shared';
+import { effectiveAction, type ChatMessage, type SwarmState } from '@quell/shared';
 import { CHANNEL, COMMUNITY } from '../core/community';
 import { config } from '../core/config';
 import { EventsService } from '../core/events.service';
@@ -12,8 +12,11 @@ import { DEMO_BEATS, DEMO_GAP_MS } from './demo';
 import { PERSONAS, SCAM_WAVE, type Persona } from './personas';
 
 const TICK_MS = 100;
-const BATCH = 12;
-const LOW_WATER = 6;
+// Small batches, so lines written as replies are still on topic when they post.
+const BATCH = 8;
+const LOW_WATER = 4;
+/** How much of the visible chat the generator reads before writing. */
+const CONTEXT_LINES = 15;
 const MAX_RATE = 30;
 const AVOID_LIST = 20;
 
@@ -204,26 +207,44 @@ export class SwarmService implements OnModuleDestroy {
     try {
       const topics = shuffle(TOPICS).slice(0, 3).join('; ');
       const avoid = (this.recentByPersona.get(persona.id) ?? []).map((t) => `- ${t}`).join('\n');
+      const context = this.visibleChat();
+      const cast = persona.voices
+        ? Object.entries(persona.voices)
+            .map(([name, voice]) => `- ${name}: ${voice}`)
+            .join('\n')
+        : null;
       const res = await this.mubit.client.chat.completions.create(
         {
           model: config.swarmModel,
-          temperature: 1.1,
+          temperature: 1,
           response_format: { type: 'json_object' },
           messages: [
             {
               role: 'system',
               content:
-                `You write realistic live-chat messages for a Discord server: ${COMMUNITY.about} ` +
-                'Return JSON: {"messages":[{"author":"username","text":"message"}]}. ' +
-                'Every message must be clearly different from the others and from the ones listed to avoid: ' +
-                'different wording, length (3 to 40 words), tone, typos and emoji. ' +
-                'Usernames are short, lowercase and varied. Never use slurs. Any personal details must be invented.',
+                `You play real people in the live chat of a developer's stream. The channel: ${COMMUNITY.about} ` +
+                'On stream right now the host is live-deploying Shipyard v1.0 and answering chat. ' +
+                'Write like people typing fast in Twitch chat: mostly lowercase, 2 to 25 words, fragments, ' +
+                'the odd typo, slang and emoji where that person would use them. Never write polished or ' +
+                'essay-like sentences, never use em dashes, hashtags or "Imagine..." openers, and never ' +
+                'explain the joke. Every message must differ from the others in wording, length and opening. ' +
+                "A person's quirks and catchphrases show now and then, not in every line. " +
+                'Only @mention people who appear in the chat shown. ' +
+                'Every message must clearly be the kind the brief describes, even when it replies to someone. ' +
+                'Never use slurs. Any personal details must be invented. ' +
+                'Return JSON: {"messages":[{"author":"username","text":"message"}]}.',
             },
             {
               role: 'user',
               content:
-                `Write ${BATCH} messages from ${persona.brief}\n` +
-                `Weave in some of these topics where it fits: ${topics}.` +
+                (context ? `Chat so far (oldest first):\n${context}\n\n` : '') +
+                `Write the next ${BATCH} messages from ${persona.brief}\n` +
+                (cast ? `Speak only as these people, each in their own voice:\n${cast}\n` : '') +
+                (context
+                  ? 'About half should react to the chat above: answer a question someone asked, reply to a ' +
+                    'person with @name, agree or argue, carry on a joke, or react to what is on stream. ' +
+                    `The rest start something new, touching on: ${topics}.`
+                  : `Touch on: ${topics}.`) +
                 (avoid ? `\nDo not repeat or paraphrase these recent ones:\n${avoid}` : ''),
             },
           ],
@@ -233,9 +254,15 @@ export class SwarmService implements OnModuleDestroy {
       const parsed = JSON.parse(res.choices[0]?.message?.content ?? '{}') as {
         messages?: { author?: string; text?: string }[];
       };
+      const castNames = persona.voices ? Object.keys(persona.voices) : null;
       const fresh = (parsed.messages ?? [])
         .filter((m) => typeof m.text === 'string' && m.text.trim())
-        .map((m) => ({ author: m.author?.trim() || pick(persona.authors), text: m.text!.trim().slice(0, 300) }))
+        .map((m) => {
+          const author = m.author?.trim();
+          // Keep the cast consistent: a name outside it becomes one of the cast.
+          const valid = author && (!castNames || castNames.includes(author));
+          return { author: valid ? author : pick(castNames ?? persona.authors), text: m.text!.trim().slice(0, 300) };
+        })
         .filter((m) => persona.id === 'raider' || !this.used.has(normalise(m.text)));
       this.buffers.get(persona.id)!.push(...shuffle(fresh));
     } catch (err) {
@@ -245,6 +272,16 @@ export class SwarmService implements OnModuleDestroy {
       this.generating.delete(persona.id);
       this.broadcast();
     }
+  }
+
+  /** What a viewer can currently read in chat: allowed and redacted lines, as shown. */
+  private visibleChat(): string {
+    return this.store
+      .recent(60)
+      .filter((m) => m.status === 'done' && (m.source === 'mod' || ['allow', 'redact'].includes(effectiveAction(m) ?? '')))
+      .slice(-CONTEXT_LINES)
+      .map((m) => `${m.author}: ${m.display ?? m.text}`)
+      .join('\n');
   }
 
   private broadcast(): void {
