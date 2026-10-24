@@ -30,17 +30,6 @@
 
 </div>
 
-<br />
-
-<table>
-  <tr>
-    <td align="center" width="25%"><h3>86–93%</h3><sub>of chat handled without<br />a moderator</sub></td>
-    <td align="center" width="25%"><h3>83% → 90%</h3><sub>agreement with moderators<br />after four corrections</sub></td>
-    <td align="center" width="25%"><h3>4 / 4</h3><sub>new rule-breaking messages handled<br />correctly after one correction each</sub></td>
-    <td align="center" width="25%"><h3>2 calls</h3><sub>to moderate a<br />120-message raid</sub></td>
-  </tr>
-</table>
-
 ## Overview
 
 Generic moderation models don't know house rules. One community bans selling in chat,
