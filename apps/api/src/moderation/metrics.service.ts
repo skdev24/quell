@@ -1,5 +1,5 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import type { Metrics, ModAction } from '@quell/shared';
+import { REVIEW_SECONDS, needsHuman, type Metrics, type ModAction } from '@quell/shared';
 import { EventsService } from '../core/events.service';
 import { StoreService } from '../core/store.service';
 import { ModerationService } from './moderation.service';
@@ -54,9 +54,16 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
+    const needsReview = done.filter((m) => !m.correction && needsHuman(m.decision!)).length;
+    const autoHandled = done.length - needsReview - done.filter((m) => m.correction).length;
+
     return {
       moderated: done.length,
       cached: done.filter((m) => m.cached).length,
+      autoHandled,
+      needsReview,
+      autoRate: done.length ? autoHandled / done.length : null,
+      minutesSaved: Math.round((autoHandled * REVIEW_SECONDS) / 60),
       queued: this.moderation.queued,
       errors: all.filter((m) => m.status === 'error').length,
       byAction,

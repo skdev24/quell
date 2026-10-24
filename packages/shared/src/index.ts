@@ -27,6 +27,14 @@ export interface ModDecision {
   confidence: Confidence;
 }
 
+/** Seconds a human moderator takes to read and decide one message (an estimate). */
+export const REVIEW_SECONDS = 5;
+
+/** Whether a moderated message still needs a human: held, or removed without high confidence. */
+export function needsHuman(d: ModDecision): boolean {
+  return d.action === 'flag' || (d.action === 'remove' && d.confidence !== 'high');
+}
+
 export interface Verdict {
   action: ModAction;
   reason: ModReason;
@@ -78,6 +86,14 @@ export interface Metrics {
   moderated: number;
   /** Duplicates answered from the cache instead of the model. */
   cached: number;
+  /** Messages settled with no human: allowed, redacted, or removed with high confidence. */
+  autoHandled: number;
+  /** Messages a moderator has to look at: held, or removed without high confidence. */
+  needsReview: number;
+  /** autoHandled / moderated. */
+  autoRate: number | null;
+  /** Reading time saved, assuming a moderator spends REVIEW_SECONDS per message. */
+  minutesSaved: number;
   queued: number;
   errors: number;
   byAction: Record<ModAction, number>;

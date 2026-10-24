@@ -3,7 +3,7 @@
 import clsx from 'clsx';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowUpRight, Brain, X } from 'lucide-react';
-import type { EvalRun, Metrics, Rule } from '@quell/shared';
+import { REVIEW_SECONDS, type EvalRun, type Metrics, type Rule } from '@quell/shared';
 import { api } from '@/lib/api';
 import { Benchmark } from './Benchmark';
 import { Panel } from './primitives';
@@ -30,7 +30,9 @@ export function LearningPanel({
       meta={m && <span className="tnum">{m.graded} graded</span>}
     >
       <div className="h-full overflow-y-auto overscroll-contain p-3">
-        <div className="rounded-tw-lg bg-raised p-3.5">
+        <Workload m={m} />
+
+        <div className="mt-2 rounded-tw-lg bg-raised p-3.5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="label">Agrees with your mods</div>
@@ -133,6 +135,49 @@ export function LearningPanel({
         )}
       </div>
     </Panel>
+  );
+}
+
+/** The usefulness number: how much of chat no moderator had to touch. */
+function Workload({ m }: { m: Metrics | null }) {
+  const rate = m?.autoRate ?? null;
+  const auto = m?.autoHandled ?? 0;
+  const review = m?.needsReview ?? 0;
+  const corrected = m?.corrections ?? 0;
+  const total = auto + review + corrected;
+  const share = (n: number) => (total ? `${(n / total) * 100}%` : '0%');
+  return (
+    <div className="rounded-tw-lg bg-gradient-to-br from-purple/25 to-raised p-3.5 ring-1 ring-purple/30">
+      <div className="label">Handled without a moderator</div>
+      <div className="mt-1.5 flex items-end justify-between gap-3">
+        <div className="tnum text-[36px] font-bold leading-none tracking-[-0.02em] text-fg">{pct(rate)}</div>
+        <div className="pb-0.5 text-right text-[12px] leading-snug text-dim">
+          <div>
+            <span className="tnum font-semibold text-fg">~{m?.minutesSaved ?? 0} min</span> of reading saved
+          </div>
+          <div className="text-faint">at {REVIEW_SECONDS}s per message</div>
+        </div>
+      </div>
+      <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-white/[0.08]">
+        <div className="h-full bg-purple-soft transition-[width] duration-500" style={{ width: share(auto) }} />
+        <div className="h-full bg-flag transition-[width] duration-500" style={{ width: share(review) }} />
+        <div className="h-full bg-allow transition-[width] duration-500" style={{ width: share(corrected) }} />
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-dim">
+        <Legend color="bg-purple-soft" label="Automatic" value={auto} />
+        <Legend color="bg-flag" label="Needs a mod" value={review} />
+        <Legend color="bg-allow" label="Corrected" value={corrected} />
+      </div>
+    </div>
+  );
+}
+
+function Legend({ color, label, value }: { color: string; label: string; value: number }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={clsx('size-2 rounded-full', color)} />
+      {label} <span className="tnum font-semibold text-fg">{value}</span>
+    </span>
   );
 }
 

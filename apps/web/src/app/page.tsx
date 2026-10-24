@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import type { ModAction } from '@quell/shared';
+import { needsHuman, type ModAction } from '@quell/shared';
 import { Chat } from '@/components/Chat';
 import { LearningPanel } from '@/components/LearningPanel';
 import { ReviewQueue, type Selection } from '@/components/ReviewQueue';
@@ -19,11 +19,18 @@ export default function ModView() {
   const [note, setNote] = useState<{ text: string; id: number } | null>(null);
 
   const messages = useMemo(() => live.order.map((id) => live.byId[id]).filter(Boolean), [live.order, live.byId]);
-  const queue = useMemo(
+  const all = useMemo(
     () =>
       messages
         .filter((m) => m.status === 'done' && m.decision && m.decision.action !== 'allow' && !m.correction && !m.cached)
         .slice(-QUEUE_LIMIT)
+        .reverse(),
+    [messages],
+  );
+  const needs = useMemo(
+    () =>
+      messages
+        .filter((m) => m.status === 'done' && m.decision && !m.correction && !m.cached && needsHuman(m.decision))
         .reverse(),
     [messages],
   );
@@ -48,7 +55,8 @@ export default function ModView() {
       <TopBar swarm={live.swarm} connected={live.connected} queued={live.metrics?.queued ?? 0} onNote={flash} />
       <main className="grid min-h-0 flex-1 grid-cols-[minmax(320px,1fr)_minmax(0,1.15fr)_minmax(340px,380px)] gap-2.5 p-2.5">
         <ReviewQueue
-          queue={queue}
+          needs={needs}
+          all={all}
           selected={selected}
           selection={selection}
           onClearSelection={() => setSelection(null)}

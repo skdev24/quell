@@ -20,18 +20,24 @@ export interface Selection {
 
 /** Everything the model held, removed or redacted, AutoMod-queue style. */
 export function ReviewQueue({
-  queue,
+  needs,
+  all,
   selected,
   selection,
   onClearSelection,
   onCorrected,
 }: {
-  queue: ModeratedMessage[];
+  /** Messages a moderator must decide: held, or removed without high confidence. */
+  needs: ModeratedMessage[];
+  /** Everything the model held, removed or redacted, to double-check. */
+  all: ModeratedMessage[];
   selected: ModeratedMessage | null;
   selection: Selection | null;
   onClearSelection: () => void;
   onCorrected: (note: string) => void;
 }) {
+  const [tab, setTab] = useState<'needs' | 'all'>('needs');
+  const queue = tab === 'needs' ? needs : all;
   // While the pointer is over the list it holds still; new items wait behind a button.
   const [frozen, setFrozen] = useState<string[] | null>(null);
   const live = selected && !selected.correction ? [selected, ...queue.filter((m) => m.id !== selected.id)] : queue;
@@ -49,7 +55,28 @@ export function ReviewQueue({
       title="AutoMod queue"
       icon={<ShieldAlert className="size-3.5 text-dim" />}
       className="relative"
-      meta={<span className="tnum">{queue.length}</span>}
+      meta={
+        <div className="flex rounded-full bg-white/[0.06] p-0.5">
+          {(
+            [
+              ['needs', 'Needs you', needs.length],
+              ['all', 'All actions', all.length],
+            ] as const
+          ).map(([id, label, n]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              className={clsx(
+                'h-6 rounded-full px-2.5 text-[12px] font-semibold transition-colors',
+                tab === id ? 'bg-purple text-white' : 'text-dim hover:text-fg',
+              )}
+            >
+              {label} <span className="tnum opacity-80">{n}</span>
+            </button>
+          ))}
+        </div>
+      }
     >
       <AnimatePresence>
         {waiting > 0 && (
@@ -76,7 +103,9 @@ export function ReviewQueue({
               <ShieldAlert className="mx-auto mb-3 size-8 text-hover" />
               <p className="text-[14px] font-semibold text-fg">All caught up</p>
               <p className="mt-1 text-[12px] leading-relaxed text-dim">
-                Held, removed and redacted messages show up here. Hover any chat line to correct it.
+                {tab === 'needs'
+                  ? 'Quell handled everything on its own. Held messages and unsure removals land here.'
+                  : 'Held, removed and redacted messages show up here. Hover any chat line to correct it.'}
               </p>
             </div>
           </div>
