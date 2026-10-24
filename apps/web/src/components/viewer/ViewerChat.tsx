@@ -3,7 +3,7 @@
 import clsx from 'clsx';
 import { ArrowDown, Ban as BanIcon, Clock, Loader2, MessageSquare, ShieldAlert, ShieldCheck, ShieldX, Users } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { banActive, banKey, type Ban, type ModeratedMessage } from '@quell/shared';
+import { findBan, type Ban, type ModeratedMessage } from '@quell/shared';
 import { api } from '@/lib/api';
 import { REASON_LABEL, nameColor, timeOf } from '@/lib/verdict';
 import { MessageText } from '../MessageText';
@@ -49,8 +49,7 @@ export function ViewerChat({
   const [lastSent, setLastSent] = useState<{ id: string; at: number } | null>(null);
   const noticeId = useRef(0);
   const cooldown = Math.max(0, Math.ceil((slowUntil - now) / 1000));
-  const key = banKey(me, device || undefined);
-  const ban = bans.find((b) => b.id === key && banActive(b, now));
+  const ban = findBan(bans, me, device || undefined, now);
 
   // One clock drives slow mode and the status banner; it stops with the component.
   useEffect(() => {

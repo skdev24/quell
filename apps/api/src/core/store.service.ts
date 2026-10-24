@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
-import { banActive, banKey, type Ban, type ModeratedMessage, type Rule } from '@quell/shared';
+import { banActive, findBan, type Ban, type ModeratedMessage, type Rule } from '@quell/shared';
 import { config } from './config';
 
 const KEEP_IN_MEMORY = 4000;
@@ -117,8 +117,7 @@ export class StoreService {
   }
 
   banFor(author: string, device?: string): Ban | undefined {
-    const ban = this.bans.get(banKey(author, device));
-    return ban && banActive(ban) ? ban : undefined;
+    return findBan([...this.bans.values()], author, device);
   }
 
   putBan(ban: Ban): void {

@@ -90,6 +90,15 @@ export function banActive(b: Ban, now = Date.now()): boolean {
   return b.until === null || b.until > now;
 }
 
+/**
+ * The ban in force for a chatter. Checks the phone and the name, so a ban placed
+ * on an older message without a device id still holds once the phone sends one.
+ */
+export function findBan(bans: Ban[], author: string, device?: string, now = Date.now()): Ban | undefined {
+  const keys = [banKey(author), ...(device ? [banKey(author, device)] : [])];
+  return bans.find((b) => keys.includes(b.id) && banActive(b, now));
+}
+
 export type MessageStatus = 'queued' | 'done' | 'error';
 
 export interface ModeratedMessage extends ChatMessage {

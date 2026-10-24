@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { AnimatePresence, motion } from 'motion/react';
 import { Brain, MessageSquare, ShieldAlert, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { banActive, banKey, needsHuman, type ModAction, type ModeratedMessage } from '@quell/shared';
+import { banActive, findBan, needsHuman, type ModAction, type ModeratedMessage } from '@quell/shared';
 import { Chat } from '@/components/Chat';
 import { LearningPanel } from '@/components/LearningPanel';
 import { ReviewQueue, type Selection } from '@/components/ReviewQueue';
@@ -45,11 +45,7 @@ export default function ModView() {
 
   const flash = (text: string) => setNote({ text, id: Date.now() });
 
-  const bans = useMemo(() => new Map(live.bans.map((b) => [b.id, b])), [live.bans]);
-  const banOf = (m: ModeratedMessage) => {
-    const b = bans.get(banKey(m.author, m.device));
-    return b && banActive(b) ? b : undefined;
-  };
+  const banOf = (m: ModeratedMessage) => findBan(live.bans, m.author, m.device);
   const ban = (id: string, minutes: number | null) => {
     const author = live.byId[id]?.author ?? 'They';
     api
