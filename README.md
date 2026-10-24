@@ -97,9 +97,9 @@ Benchmark of 114 held-out messages with known correct decisions, never used for 
 
 | Setup | Agreement | Scams caught | p50 latency | Cost per 1k messages |
 | :-- | --: | --: | --: | --: |
-| `gpt-6-luna`, no rules | 83% | 14 / 14 | 1.27 s | — |
-| `gpt-6-luna`, four moderator rules | **90%** | 14 / 14 | 1.22 s | — |
-| `qwen3-30b-a3b-instruct-2507`, untrained | 79% | 8 / 14 | 2.48 s | $0.055 |
+| `gpt-6-luna`, no rules | 82% | 14 / 14 | 1.18 s | — |
+| `gpt-6-luna`, four moderator rules | **91%** | 14 / 14 | 1.14 s | — |
+| `qwen3-30b-a3b-instruct-2507`, untrained | 77% | 8 / 14 | 2.03 s | $0.052 |
 
 In live test sessions:
 
