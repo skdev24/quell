@@ -1,8 +1,9 @@
 'use client';
 
-import { ShieldCheck, User } from 'lucide-react';
+import { Check, ShieldCheck, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Metrics } from '@quell/shared';
+import { ChannelAvatar } from '../ChannelAvatar';
 
 // What's "on stream": the team shipping v1.0 from a terminal.
 const LOG = [
@@ -14,7 +15,7 @@ const LOG = [
   '→ blue/green: starting green (4 instances)',
   '✓ health checks passing 4/4',
   '→ shifting traffic 10% … 50% … 100%',
-  '✓ v1.0.0 is live 🚢',
+  '✓ v1.0.0 is live',
   '$ shipyard logs --follow',
   '200 GET /healthz 3ms',
   '200 GET /v1/deploys 18ms',
@@ -84,17 +85,15 @@ export function Stage({ live, viewers, metrics }: { live: boolean; viewers: numb
 export function ChannelInfo({ live }: { live: boolean }) {
   return (
     <div className="flex items-start gap-3 px-3 py-3 lg:px-0">
-      <div className={`grid size-12 shrink-0 place-items-center rounded-full p-[2px] sm:size-14 ${live ? 'bg-live' : 'bg-hover'}`}>
-        <div className="grid size-full place-items-center rounded-full bg-[#1d1442] text-[20px]">🚢</div>
-      </div>
+      <ChannelAvatar size={48} ring={2} live={live} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <h1 className="text-[16px] font-bold sm:text-[18px]">Shipyard</h1>
           <span className="grid size-4 place-items-center rounded-full bg-purple text-[9px] text-white" title="Verified">
-            ✓
+            <Check className="size-2.5" strokeWidth={3.5} />
           </span>
         </div>
-        <p className="mt-0.5 text-[14px] font-semibold leading-snug text-fg">Office hours: shipping v1.0 live, ask us anything 🚢</p>
+        <p className="mt-0.5 text-[14px] font-semibold leading-snug text-fg">Office hours: shipping v1.0 live, ask us anything</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           <span className="text-[13px] text-purple-soft">Software and Game Development</span>
           {/* Tags are a desktop nicety; on phones chat gets the space. */}

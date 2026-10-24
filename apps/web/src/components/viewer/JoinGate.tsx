@@ -3,6 +3,7 @@
 import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { nameColor } from '@/lib/verdict';
+import { ChannelAvatar } from '../ChannelAvatar';
 
 const RULES = [
   'Be kind. Roasting friends is fine, attacking people is not.',
@@ -23,15 +24,13 @@ export function JoinGate({ onJoin }: { onJoin: (name: string) => void }) {
     <div className="flex min-h-[100dvh] items-center justify-center bg-bg px-4 py-[max(24px,env(safe-area-inset-top))]">
       <div className="w-full max-w-[400px]">
         <div className="flex items-center gap-3">
-          <div className="grid size-14 shrink-0 place-items-center rounded-full bg-live p-[3px]">
-            <div className="grid size-full place-items-center rounded-full bg-[#1d1442] text-[24px]">🚢</div>
-          </div>
+          <ChannelAvatar size={56} live />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-[18px] font-bold">Shipyard</span>
               <span className="rounded-[3px] bg-live px-1.5 text-[11px] font-bold uppercase leading-[18px] text-white">Live</span>
             </div>
-            <p className="truncate text-[14px] text-dim">Office hours: shipping v1.0 live 🚢</p>
+            <p className="truncate text-[14px] text-dim">Office hours: shipping v1.0 live</p>
           </div>
         </div>
 
