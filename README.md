@@ -7,6 +7,7 @@
 <p><strong>Live-chat moderation that learns a community's rules from its moderators.</strong></p>
 
 <p>
+  <a href="#award"><img alt="1st place, Night Shift London 2026" src="https://img.shields.io/badge/%F0%9F%8F%86%201st%20place-Night%20Shift%20London%202026-f5b301?style=flat-square" /></a>
   <a href="https://mubit.ai"><img alt="Built on Mubit" src="https://img.shields.io/badge/built%20on-Mubit-9147ff?style=flat-square" /></a>
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white" />
   <img alt="NestJS" src="https://img.shields.io/badge/NestJS-11-e0234e?style=flat-square&logo=nestjs&logoColor=white" />
@@ -16,6 +17,7 @@
 </p>
 
 <p>
+  <a href="#award">Award</a> ·
   <a href="#overview">Overview</a> ·
   <a href="#demo">Demo</a> ·
   <a href="#screenshots">Screenshots</a> ·
@@ -30,6 +32,20 @@
 <img src="docs/images/hero.png" alt="Quell moderator view and viewer page" width="100%" />
 
 </div>
+
+## Award
+
+**🏆 1st place, Night Shift London 2026** · $15,000 prize
+
+Quell won first place out of 500 builders at [Night Shift](https://luma.com/nightshift-london),
+a 42-hour hackathon in Canary Wharf run by [Mubit](https://mubit.ai) for its launch
+(23–25 October 2026), built as team Cubit. Projects were judged on use of Mubit,
+usefulness, technical execution and the live demo; the brief was to turn corrections into
+model updates for a recurring task.
+
+- [How Quell works, and how it won](https://shivx.dev/blog/quell-night-shift-hackathon): the write-up
+- [Night Shift London](https://luma.com/nightshift-london): the event
+<!-- Add Mubit's announcement link here once they publish it. -->
 
 ## Overview
 
@@ -175,4 +191,4 @@ scripts          Screenshot tooling
 
 <br />
 
-<p align="center"><sub>Built for Night Shift London, October 2026.</sub></p>
+<p align="center"><sub>Designed and built by <a href="https://shivx.dev">Shivam Dev</a> · 🏆 1st place at Night Shift London, October 2026.</sub></p>
