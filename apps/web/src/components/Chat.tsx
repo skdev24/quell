@@ -89,7 +89,13 @@ export function Chat({
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 6 }}
-              onClick={() => scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' })}
+              onClick={() => {
+                // Follow live chat again straight away; a smooth scroll could land short
+                // while new messages keep arriving.
+                setPinned(true);
+                setUnseen(0);
+                if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
+              }}
               className="absolute bottom-[86px] left-1/2 inline-flex h-[30px] -translate-x-1/2 items-center gap-1.5 rounded-full bg-raised px-3 text-[12px] font-semibold text-fg shadow-lg shadow-black/50 hover:bg-hover"
             >
               <ArrowDown className="size-3.5" />
