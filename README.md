@@ -44,7 +44,7 @@ community uses it, the less its moderators have to step in.
 
 ## Demo
 
-https://github.com/user-attachments/assets/da2daf83-b194-4d96-b832-6d0d8a5f0ceb
+https://github.com/user-attachments/assets/a0dbd5d9-d0da-4663-85de-729efbd68184
 
 A 1:38 walkthrough recorded from the running app, with a phone joining the chat. It covers
 personal details hidden on arrival, one correction teaching a house rule, new look-alikes
