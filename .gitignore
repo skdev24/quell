@@ -15,3 +15,9 @@ research/
 .claude/
 apps/api/data/feed-sent.json
 apps/api/data/feed.log
+
+# Demo video files and recording tooling stay out of the repo
+docs/media/
+*.mp4
+*.mov
+*.webm

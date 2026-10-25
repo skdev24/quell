@@ -17,6 +17,7 @@
 
 <p>
   <a href="#overview">Overview</a> ·
+  <a href="#demo">Demo</a> ·
   <a href="#screenshots">Screenshots</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#results">Results</a> ·
@@ -40,6 +41,15 @@ Moderators end up correcting the same mistakes every stream.
 Quell turns each correction into a rule that applies immediately and a training example for
 a task-specific model, trained and served through [Mubit](https://mubit.ai). The longer a
 community uses it, the less its moderators have to step in.
+
+## Demo
+
+https://github.com/user-attachments/assets/da2daf83-b194-4d96-b832-6d0d8a5f0ceb
+
+A 1:38 walkthrough recorded from the running app, with a phone joining the chat. It covers
+personal details hidden on arrival, one correction teaching a house rule, new look-alikes
+handled without a moderator, a scam wave, a Twitch-style ban, a raid, the held-out
+benchmark and the adapter Mubit trained.
 
 ## Screenshots
 
