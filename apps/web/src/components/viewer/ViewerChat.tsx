@@ -186,6 +186,10 @@ export function ViewerChat({
                 }
               }}
               autoComplete="off"
+              // Chat is full of names, links and slang: autocorrect only mangles it.
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               maxLength={300}
               enterKeyHint="send"
               placeholder="Send a message"
