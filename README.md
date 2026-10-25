@@ -133,7 +133,7 @@ In live test sessions:
 
 ## Documentation
 
-[Read the documentation site](https://mosnfar.github.io/cubit/), built directly from the Markdown in `docs/`.
+[Read the documentation site](https://skdev24.github.io/quell/), built directly from the Markdown in `docs/`.
 
 - [API reference](docs/api-reference.md) — HTTP endpoints, examples, errors, rate limits and live events.
 - [Operations guide](docs/operations.md) — Production startup, configuration, backups, resets and task recovery.
