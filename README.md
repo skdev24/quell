@@ -45,7 +45,7 @@ model updates for a recurring task.
 
 - [How Quell works, and how it won](https://shivx.dev/blog/quell-night-shift-hackathon): the write-up
 - [Night Shift London](https://luma.com/nightshift-london): the event
-<!-- Add Mubit's announcement link here once they publish it. -->
+- [Quell on the Mubit showcase](https://showcase.mubit.ai/quell/): Mubit's page for the project
 
 ## Overview
 
